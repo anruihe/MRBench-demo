@@ -1,0 +1,1298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MRBench</title>
+<meta name="description" content="MRBench: benchmarking physical necessity reasoning in heterogeneous multi-robot manipulation. Eight Isaac Sim tasks in five configurations.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* A light, glassy workcell: the background is a slow field of arms (nodes) and their reach (rings);
+   content floats on frosted panels. Red = Concurrency, blue = Reach, violet = MRScissors. */
+:root {
+  /* Bauhaus: cream paper, black rules, red / yellow / blue, circles, squares and triangles */
+  --bg: #f1ebdf;
+  --ink: #141414;
+  --muted: #3e3b36;
+  --faint: #8a8479;
+  --line: rgba(20, 20, 20, .16);
+  --line-strong: #141414;
+  --glass: #faf6ee;
+  --glass-hi: #ffffff;
+  --glass-edge: #141414;
+  --cell0: #fbf8f2;
+  --shadow: 6px 6px 0 #141414;
+  --con: #d7301f;
+  --rea: #1d4f9e;
+  --yellow: #f2b705;
+  --ours: #141414;
+  --cyan: #f2b705;
+  --ok: #2c7a4b;
+  --paper: #ffffff;
+  --screen: #141414;
+  --dot: rgba(20, 20, 20, .06);
+  --blob: 0;
+  --display: "Jost", "Futura", "Century Gothic", "Helvetica Neue", Arial, sans-serif;
+  --sans: "Jost", "Futura", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --col: 1200px;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+html { scroll-behavior: smooth; scroll-padding-top: 76px }
+body { background: var(--bg); color: var(--ink); font: 400 16px/1.6 var(--sans); overflow-x: hidden }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg) }
+a { color: inherit; text-decoration-color: var(--faint); text-underline-offset: 3px }
+:focus-visible { outline: 2px solid var(--ours); outline-offset: 2px; border-radius: 4px }
+.wrap { max-width: var(--col); margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+h1, h2, h3, h4 { font-family: var(--display); text-wrap: balance; margin: 0 }
+p { margin: 0 }
+.grad { background: linear-gradient(100deg, var(--con), var(--ours) 50%, var(--rea)); -webkit-background-clip: text; background-clip: text; color: transparent }
+
+/* ---------- moving background ---------- */
+.bgfx { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none }
+.blob { position: absolute; width: min(52vmax, 900px); height: min(52vmax, 900px); border-radius: 50%; filter: blur(80px); opacity: var(--blob) }
+.blob.b1 { background: #5b6cff; left: -16vmax; top: -20vmax; animation: drift1 28s ease-in-out infinite alternate }
+.blob.b2 { background: var(--cyan); right: -18vmax; top: 10vmax; animation: drift2 34s ease-in-out infinite alternate }
+.blob.b3 { background: var(--ours); left: 22vmax; bottom: -30vmax; animation: drift3 40s ease-in-out infinite alternate; opacity: calc(var(--blob) * .8) }
+@keyframes drift1 { to { transform: translate(18vmax, 14vmax) scale(1.15) } }
+@keyframes drift2 { to { transform: translate(-16vmax, 18vmax) scale(.9) } }
+@keyframes drift3 { to { transform: translate(-14vmax, -16vmax) scale(1.1) } }
+.bgfx::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse 70% 45% at 50% -8%, rgba(140, 150, 255, .13), transparent 70%), radial-gradient(ellipse 50% 40% at 100% 100%, rgba(82, 217, 240, .05), transparent 70%) }
+.gridfx { position: absolute; inset: -56px; background-image: linear-gradient(var(--dot) 1px, transparent 1px), linear-gradient(90deg, var(--dot) 1px, transparent 1px); background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 35%, #000 25%, transparent 80%); mask-image: radial-gradient(ellipse 80% 70% at 50% 35%, #000 25%, transparent 80%);
+  animation: gridmove 50s linear infinite }
+@keyframes gridmove { to { transform: translate(56px, 56px) } }
+#field { position: absolute; inset: 0 }
+.scan { position: absolute; left: 0; right: 0; height: 36vh; top: -36vh; background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--cyan) 4%, transparent), transparent); animation: scan 13s linear infinite }
+@keyframes scan { to { transform: translateY(150vh) } }
+
+/* ---------- glass ---------- */
+.glass { background: var(--glass); -webkit-backdrop-filter: blur(18px) saturate(1.35); backdrop-filter: blur(18px) saturate(1.35); border: 1px solid var(--glass-edge); border-radius: 22px; box-shadow: var(--shadow) }
+
+/* ---------- top bar ---------- */
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 8; padding-block: 10px }
+.bar .in { display: flex; align-items: center; gap: 22px; min-height: 50px; padding: 0 10px 0 16px; border-radius: 999px; flex-wrap: wrap }
+.brand { display: inline-flex; align-items: center; gap: 10px; font: 700 18px/1 var(--display); letter-spacing: -.01em; text-decoration: none }
+.brand svg { width: 26px; height: 26px }
+.bar nav { display: flex; gap: 4px; flex-wrap: wrap; margin-left: auto }
+.bar nav a { text-decoration: none; color: var(--muted); font: 500 13px/1 var(--mono); padding: 9px 11px; border-radius: 999px; transition: background .2s, color .2s }
+.bar nav a:hover, .bar nav a.on { color: var(--ink); background: var(--glass-hi) }
+
+/* ---------- reveal ---------- */
+.js .rv { opacity: 0; transform: translateY(24px); transition: opacity .9s ease, transform .9s cubic-bezier(.2, .8, .2, 1) }
+.js .rv.in { opacity: 1; transform: none }
+.js .rv.d1 { transition-delay: .08s } .js .rv.d2 { transition-delay: .16s } .js .rv.d3 { transition-delay: .24s } .js .rv.d4 { transition-delay: .32s }
+
+/* ---------- section heads ---------- */
+section { padding-block: 96px 8px }
+.kicker { display: inline-flex; align-items: center; gap: 12px; font: 500 12px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted) }
+.kicker b { font-weight: 600; color: var(--ink); background: var(--glass-hi); border: 1px solid var(--line-strong); box-shadow: inset 0 0 12px -4px color-mix(in srgb, var(--ours) 60%, transparent); padding: 6px 10px; border-radius: 999px; letter-spacing: .06em }
+.kicker::after { content: ""; width: 72px; height: 1px; background: linear-gradient(90deg, var(--line-strong), transparent) }
+h2 { font-size: clamp(32px, 4.8vw, 56px); font-weight: 700; letter-spacing: -.03em; line-height: 1.04; margin-top: 18px; max-width: 22ch }
+h3 { font-size: clamp(21px, 2.2vw, 26px); font-weight: 600; letter-spacing: -.015em; line-height: 1.2 }
+.lede { color: var(--muted); max-width: 64ch; margin-top: 16px; font-size: 17.5px }
+.sub { margin-top: 64px; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap }
+.sub .n { font: 600 12px/1 var(--mono); color: var(--ours); letter-spacing: .08em }
+.note { font-size: 13px; color: var(--faint); margin-top: 12px }
+
+/* ---------- hero ---------- */
+.hero { padding-block: 40px 0 }
+.hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.02fr); gap: 44px; align-items: center }
+.quote { font: italic 400 15px/1.5 var(--sans); color: var(--muted); border-left: 2px solid; border-image: linear-gradient(var(--con), var(--rea)) 1; padding-left: 12px; max-width: 46ch }
+.quote span { font-style: normal; font: 500 12px/1 var(--mono); color: var(--faint); display: block; margin-top: 6px }
+.hero h1 { font-size: clamp(60px, 8.6vw, 120px); font-weight: 700; letter-spacing: -.045em; line-height: .95; margin-top: 22px; padding: 0 .08em .06em 0; display: inline-block;
+  background: linear-gradient(90deg, var(--con), var(--ours), var(--rea), var(--cyan), var(--con)); background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: sheen 14s linear infinite }
+@keyframes sheen { to { background-position: 300% 0 } }
+.hero .title { font: 500 clamp(19px, 2.2vw, 25px)/1.3 var(--display); letter-spacing: -.01em; max-width: 30ch; margin-top: 20px }
+.hero .authors { margin-top: 14px; color: var(--muted); font-size: 15px }
+.links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; border-radius: 999px; font: 600 14px/1 var(--sans); text-decoration: none; color: var(--ink); background: var(--glass-hi); border: 1px solid var(--line); cursor: pointer; transition: transform .2s, box-shadow .2s }
+.btn:hover { transform: translateY(-2px); box-shadow: var(--shadow) }
+.btn.primary { color: #07080b; border-color: transparent; background: var(--ink) }
+.btn[aria-disabled="true"] { opacity: .55; cursor: default; transform: none; box-shadow: none }
+.btn small { font: 500 11px/1 var(--mono); opacity: .8 }
+
+/* cover carousel: one rounded clip in the middle, its neighbours peeking at the sides */
+.cover { position: relative; height: min(86svh, 880px, calc((100vw - 2 * var(--peek)) / 1.75 + 56px)); min-height: 400px; overflow: hidden; --peek: clamp(28px, 8vw, 128px); --gap: 16px; padding-top: 4px }
+.cv-track { display: flex; gap: var(--gap); height: calc(100% - 56px); transition: transform .8s cubic-bezier(.16, 1, .3, 1); will-change: transform }
+.cslide { flex: 0 0 calc(100% - 2 * var(--peek)); min-width: 0; height: 100%; cursor: pointer; padding: 0; border: 0; background: none }
+.cslide .card { position: relative; height: 100%; border-radius: clamp(24px, 2.6vw, 38px); overflow: hidden; background: var(--screen); transform: scale(.94); filter: saturate(.6) brightness(.75); transition: transform .8s cubic-bezier(.16, 1, .3, 1), filter .8s; box-shadow: var(--shadow) }
+.cslide.on { cursor: default } .cslide.on .card { transform: none; filter: none }
+.cslide video, .cslide img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 38% }
+.cslide .card::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse 55% 50% at 50% 46%, rgba(6, 9, 19, .5), transparent 75%), linear-gradient(to top, rgba(6, 9, 19, .72), transparent 38%) }
+.cv-copy { position: absolute; left: var(--peek); right: var(--peek); top: 0; height: calc(100% - 56px); display: grid; place-content: center; justify-items: center; text-align: center; color: #fff; pointer-events: none; padding: 0 20px }
+.cv-copy h1 { font-size: clamp(64px, 12vw, 168px); font-weight: 700; letter-spacing: -.045em; line-height: .92; text-shadow: 0 6px 40px rgba(0, 0, 0, .35); animation: rise .9s cubic-bezier(.16, 1, .3, 1) both .1s }
+.cv-quote { font: italic 400 14px/1.4 var(--sans); opacity: .85; animation: rise .9s cubic-bezier(.16, 1, .3, 1) both }
+.cv-sub { font: 500 clamp(17px, 2vw, 26px)/1.25 var(--display); letter-spacing: -.01em; max-width: 30ch; margin-top: 14px; animation: rise .9s cubic-bezier(.16, 1, .3, 1) both .2s }
+.cv-btn { pointer-events: auto; margin-top: 22px; display: inline-flex; gap: 8px; align-items: center; padding: 10px 18px; border-radius: 999px; color: #fff; text-decoration: none; font: 600 14px/1 var(--sans); border: 1px solid rgba(255, 255, 255, .55); background: rgba(255, 255, 255, .12); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); animation: rise .9s cubic-bezier(.16, 1, .3, 1) both .3s; transition: background .2s }
+.cv-btn:hover { background: rgba(255, 255, 255, .26) }
+@keyframes rise { from { opacity: 0; transform: translateY(18px) } to { opacity: 1; transform: none } }
+.cv-cap { position: absolute; left: calc(var(--peek) + 26px); bottom: 82px; color: #f2f5ff; pointer-events: none; max-width: 60% }
+.cv-cap .id { font: 500 11.5px/1 var(--mono); letter-spacing: .08em; opacity: .85; display: flex; gap: 8px; align-items: center }
+.cv-cap .id i { width: 8px; height: 8px; border-radius: 50%; display: inline-block }
+.cv-cap b { display: block; font: 600 22px/1.15 var(--display); margin-top: 6px }
+.cv-cap .ans { font: 500 12.5px/1.3 var(--mono); margin-top: 5px; color: #c9d4ff }
+.cv-cap .prog { width: 180px; height: 2px; background: rgba(255, 255, 255, .25); margin-top: 10px; border-radius: 2px; overflow: hidden }
+.cv-cap .prog span { display: block; height: 100%; width: 0; background: #fff }
+.cv-nav { position: absolute; top: calc(50% - 50px); width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--glass-hi); color: var(--ink); font: 400 26px/1 var(--sans); cursor: pointer; display: grid; place-items: center; box-shadow: var(--shadow); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); z-index: 2 }
+.cv-nav.prev { left: max(8px, calc(var(--peek) / 2 - 22px)) } .cv-nav.next { right: max(8px, calc(var(--peek) / 2 - 22px)) }
+.cv-dots { position: absolute; left: 0; right: 0; bottom: 16px; display: flex; gap: 8px; justify-content: center }
+.cv-dots button { width: 8px; height: 8px; border-radius: 4px; border: 0; padding: 0; background: var(--line-strong); cursor: pointer; transition: width .4s, background .4s }
+.cv-dots button[aria-current="true"] { width: 34px; background: linear-gradient(90deg, var(--con), var(--ours), var(--rea)) }
+.paper { padding-block: 56px 0 }
+.paper-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 40px; align-items: end }
+.paper-h { font-size: clamp(26px, 3.2vw, 40px); max-width: 26ch; margin-top: 16px; letter-spacing: -.025em; line-height: 1.12 }
+.paper .authors { margin-top: 12px; color: var(--muted) }
+/* marquee rows of scenes */
+.marq { display: grid; gap: 12px; margin-top: 34px; --mq-w: clamp(170px, 17vw, 240px) }
+.mrow { overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent) }
+.mtrack { display: flex; gap: 12px; width: max-content; animation: mq var(--dur, 90s) linear infinite }
+.mrow.rev .mtrack { animation-direction: reverse }
+.mrow:hover .mtrack { animation-play-state: paused }
+@keyframes mq { to { transform: translateX(calc(-50% - 6px)) } }
+.mq { position: relative; flex: 0 0 var(--mq-w); aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: var(--screen); padding: 0; cursor: pointer; transition: transform .25s, box-shadow .25s }
+.mq:hover { transform: translateY(-3px); box-shadow: var(--shadow) }
+.mq img, .mq video, .mq .cell { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background-repeat: no-repeat }
+.mq span { position: absolute; left: 6px; bottom: 6px; z-index: 1; font: 600 10px/1 var(--mono); color: #fff; background: rgba(6, 9, 19, .62); padding: 4px 6px; border-radius: 4px }
+.mq i { position: absolute; right: 7px; top: 7px; z-index: 1; width: 7px; height: 7px; border-radius: 50%; box-shadow: 0 0 0 2px rgba(6, 9, 19, .45) }
+/* leaderboard */
+.lb-wrap { margin-top: 18px; overflow-x: auto; padding: 4px }
+.lb { width: 100%; border-collapse: collapse; min-width: 900px; font-variant-numeric: tabular-nums }
+.lb th, .lb td { padding: 0 6px; height: 54px; text-align: center; border-bottom: 1px solid var(--line); white-space: nowrap }
+.lb th { height: 46px; font: 600 11.5px/1.2 var(--mono); color: var(--muted) }
+.lb th:nth-child(2), .lb td:nth-child(2) { text-align: left }
+.lb th button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 6px 4px; border-radius: 6px }
+.lb th button::after { content: " ↕"; opacity: .35 }
+.lb th button[aria-pressed="true"] { color: var(--ink) }
+.lb th button[aria-pressed="true"]::after { content: " ↓"; opacity: 1; color: var(--ours) }
+.lb th button.asc[aria-pressed="true"]::after { content: " ↑" }
+.lb tbody tr { transition: background .2s }
+.lb tbody tr:hover td { background: color-mix(in srgb, var(--ours) 5%, transparent) }
+.lb tbody tr:last-child td { border-bottom: 0 }
+.lb .rk { width: 44px; font: 700 15px/1 var(--display) }
+.lb .rk b { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--glass-hi); border: 1px solid var(--line) }
+.lb tr.top .rk b { color: #fff; border-color: transparent; background: linear-gradient(135deg, var(--con), var(--ours), var(--rea)) }
+.lb .nm { font: 600 15px/1.2 var(--sans) } .lb .nm small { display: block; font: 500 11px/1.3 var(--mono); color: var(--faint); margin-top: 3px }
+.lb tr.ours .nm { color: var(--ours) }
+.lb .chip { font: 600 10px/1 var(--mono); color: #fff; background: var(--ours); padding: 3px 6px; border-radius: 999px; margin-left: 6px; vertical-align: 2px }
+.lb td.on { font-weight: 700; color: var(--ink); position: relative }
+.lb td.on .lbbar { position: absolute; left: 10%; right: 10%; bottom: 9px; height: 3px; border-radius: 2px; background: var(--line) }
+.lb td.on .lbbar i { display: block; height: 100%; border-radius: 2px; background: var(--faint); transition: width .8s cubic-bezier(.2, .8, .2, 1) }
+.lb tr.ours td.on .lbbar i { background: linear-gradient(90deg, var(--ours), var(--rea)) }
+.lb td { font-size: 14px; color: var(--muted) }
+.stats { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); margin-top: 52px; padding: 8px }
+.stat { padding: 16px 14px; border-right: 1px solid var(--line) }
+.stat:last-child { border-right: 0 }
+.stat b { display: block; font: 700 clamp(28px, 3.4vw, 40px)/1 var(--display); letter-spacing: -.03em; font-variant-numeric: tabular-nums }
+.stat > span { display: block; font-size: 13px; color: var(--muted); margin-top: 8px; line-height: 1.35 }
+
+/* figures */
+figure { margin: 34px 0 0 }
+.figbox { background: var(--paper); border-radius: 18px; outline: 1px solid rgba(255, 255, 255, .06); outline-offset: 6px; padding: clamp(8px, 1.6vw, 20px); position: relative; overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--line) }
+.figbox svg, .figbox img { display: block; width: 100%; height: auto }
+figcaption { display: flex; gap: 16px; align-items: baseline; justify-content: space-between; margin-top: 12px; color: var(--muted); font-size: 14px; flex-wrap: wrap }
+figcaption p { max-width: 86ch }
+.replay { font: 500 12px/1 var(--mono); border: 1px solid var(--line); background: var(--glass-hi); color: var(--muted); border-radius: 999px; padding: 7px 13px; cursor: pointer; white-space: nowrap }
+.replay:hover { color: var(--ink) }
+.fig [class*="a-s"] { transition: opacity .55s ease }
+.figwrap.prep .a-s1, .figwrap.prep .a-s2, .figwrap.prep .a-s3, .figwrap.prep .a-s4, .figwrap.prep .a-s5, .figwrap.prep .a-s6,
+.figwrap.prep .a-s7, .figwrap.prep .a-s8, .figwrap.prep .a-s9, .figwrap.prep .a-s10, .figwrap.prep .a-s11 { opacity: 0; transition: none }
+.figwrap.play .a-s1 { opacity: 1; transition-delay: .10s } .figwrap.play .a-s2 { opacity: 1; transition-delay: .55s }
+.figwrap.play .a-s3 { opacity: 1; transition-delay: 1.0s } .figwrap.play .a-s4 { opacity: 1; transition-delay: 1.45s }
+.figwrap.play .a-s5 { opacity: 1; transition-delay: 1.9s } .figwrap.play .a-s6 { opacity: 1; transition-delay: 2.35s }
+.figwrap.play .a-s7 { opacity: 1; transition-delay: 2.8s } .figwrap.play .a-s8 { opacity: 1; transition-delay: 3.25s }
+.figwrap.play .a-s9 { opacity: 1; transition-delay: 3.7s } .figwrap.play .a-s10 { opacity: 1; transition-delay: 4.15s }
+.figwrap.play .a-s11 { opacity: 1; transition-delay: 4.6s }
+
+/* ---------- concept cards ---------- */
+.cards3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 36px }
+.card { padding: 22px; position: relative; overflow: hidden; min-width: 0 }
+.card .ic { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: linear-gradient(135deg, color-mix(in srgb, var(--con) 18%, transparent), color-mix(in srgb, var(--rea) 22%, transparent)); border: 1px solid var(--line) }
+.card .ic svg { width: 24px; height: 24px; stroke: var(--ink); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round }
+.card h3 { margin-top: 16px; font-size: 21px }
+.card p { margin-top: 8px; color: var(--muted); font-size: 15px }
+.card .math { margin-top: 14px; font: 500 13px/1.4 var(--mono); color: var(--ink); background: var(--glass-hi); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; display: inline-block }
+.card::before { content: ""; position: absolute; inset: 0 0 auto; height: 2px; background: linear-gradient(90deg, var(--con), var(--ours), var(--rea)); opacity: .8 }
+.settles { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; align-items: center; font-size: 14.5px; color: var(--muted) }
+.pill { font: 600 12.5px/1 var(--mono); padding: 8px 12px; border-radius: 999px; background: var(--glass-hi); border: 1px solid var(--line); color: var(--ink) }
+
+/* suites */
+.suites { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 28px }
+.suite { padding: 22px 22px 20px; position: relative; overflow: hidden }
+.suite .tag { font: 600 12px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase }
+.suite.con .tag { color: var(--con) } .suite.rea .tag { color: var(--rea) }
+.suite h4 { font-size: 22px; font-weight: 600; margin-top: 10px; letter-spacing: -.01em }
+.suite p { color: var(--muted); font-size: 15px; margin-top: 8px }
+.suite .glow { position: absolute; right: -60px; top: -60px; width: 180px; height: 180px; border-radius: 50%; filter: blur(36px); opacity: .16 }
+.suite.con .glow { background: var(--con) } .suite.rea .glow { background: var(--rea) }
+
+/* five configurations */
+.confs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin-top: 28px }
+.conf { padding: 16px 16px 18px; min-width: 0; transition: transform .3s, box-shadow .3s }
+.conf:hover { transform: translateY(-4px) }
+.conf .nm { font: 600 15px/1 var(--mono); display: flex; justify-content: space-between; align-items: baseline }
+.conf .nm span { font: 500 11px/1 var(--mono); color: var(--faint) }
+.conf svg { width: 100%; max-width: 240px; height: auto; display: block; margin: 12px auto 0 }
+.conf p { font-size: 13.5px; color: var(--muted); margin-top: 10px; line-height: 1.45 }
+.conf .beats { margin-top: 10px; font: 500 11.5px/1.35 var(--mono); color: var(--ours) }
+.mini .tb { fill: color-mix(in srgb, var(--ink) 5%, transparent); stroke: var(--line-strong) }
+.mini .need { fill: var(--ours) } .mini .idle { fill: var(--cell0); stroke: var(--faint); stroke-width: 1.5 }
+.mini .gone { fill: none; stroke: var(--faint); stroke-width: 1.3; stroke-dasharray: 3 3 }
+.mini .swap { fill: var(--cyan) } .mini .prop { fill: var(--ok) } .mini .dist { fill: none; stroke: var(--ok); stroke-width: 1.4 }
+.mini text { font: 600 9px var(--mono); fill: #fff } .mini text.o { fill: var(--muted) }
+.mini .ring { fill: none; stroke: var(--ours); stroke-width: 1; opacity: .5; transform-box: fill-box; transform-origin: center; animation: ring 2.8s ease-out infinite }
+@keyframes ring { from { transform: scale(.6); opacity: .6 } to { transform: scale(2.1); opacity: 0 } }
+
+/* ---------- task gallery ---------- */
+.gal-head { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 64px }
+.seg { display: inline-flex; background: var(--glass-hi); border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 2px }
+.seg button { font: 600 12px/1 var(--mono); padding: 8px 12px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg) }
+.suite-row { display: flex; align-items: center; gap: 12px; margin: 30px 0 14px; font: 600 12px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase }
+.suite-row::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--line-strong), transparent) }
+.suite-row i { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 12px currentColor }
+.suite-row.con { color: var(--con) } .suite-row.rea { color: var(--rea) }
+.suite-row span { color: var(--muted); letter-spacing: .02em; text-transform: none; font-weight: 500 }
+.tgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px }
+.tcard { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr); gap: 16px; padding: 12px; min-width: 0; transition: transform .35s, box-shadow .35s }
+.tcard:hover { transform: translateY(-3px) }
+.tmedia { position: relative; aspect-ratio: 1 / 1; border-radius: 15px; overflow: hidden; background: var(--screen); max-width: 100% }
+.tmedia video, .tmedia img { width: 100%; height: 100%; object-fit: cover; display: block }
+.tmedia img.fade, .tmedia video.fade { animation: fadein .45s ease }
+@keyframes fadein { from { opacity: .15 } to { opacity: 1 } }
+.tmedia .hud { inset: 9px; --c: rgba(255, 255, 255, .6) }
+.tmedia .tag { position: absolute; left: 10px; bottom: 10px; z-index: 3; font: 500 10.5px/1 var(--mono); background: rgba(6, 9, 19, .7); color: #e9edf9; padding: 5px 8px; border-radius: 6px; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px) }
+.tinfo { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 4px 4px 4px 0 }
+.tid { display: flex; align-items: center; gap: 8px; font: 500 11.5px/1 var(--mono); color: var(--muted); letter-spacing: .06em }
+.tid i { width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 10px currentColor }
+.tcard.con .tid i { background: var(--con); color: var(--con) } .tcard.rea .tid i { background: var(--rea); color: var(--rea) }
+.tinfo h4 { font-size: 22px; font-weight: 600; letter-spacing: -.015em; line-height: 1.1 }
+.tsteps { font-size: 13.5px; color: var(--muted); line-height: 1.45 }
+.vchips { display: flex; gap: 5px; flex-wrap: wrap }
+.vchips button { font: 600 11px/1 var(--mono); padding: 6px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--glass-hi); color: var(--muted); cursor: pointer; transition: all .2s }
+.vchips button[aria-pressed="true"] { color: #fff; border-color: transparent; background: linear-gradient(100deg, var(--ours), var(--rea)) }
+.tcard.con .vchips button[aria-pressed="true"] { background: linear-gradient(100deg, var(--con), var(--ours)) }
+.arms { display: flex; gap: 8px; flex-wrap: wrap }
+.arm { display: grid; justify-items: center; gap: 4px; font: 500 9.5px/1.15 var(--mono); color: var(--muted); text-align: center; min-width: 40px }
+.arm i { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font: 700 12px/1 var(--mono); font-style: normal; border: 1.5px solid var(--faint); color: var(--muted); background: var(--cell0) }
+.arm.work i { background: linear-gradient(135deg, var(--ours), var(--rea)); border-color: transparent; color: #fff; box-shadow: 0 0 14px -2px color-mix(in srgb, var(--ours) 70%, transparent) }
+.arm.gone i { border-style: dashed; opacity: .45; background: transparent }
+.verdict { font: 600 18px/1.15 var(--display); letter-spacing: -.01em }
+.verdict.no { color: var(--con) }
+.thing { font-size: 13px; color: var(--muted); line-height: 1.45 }
+.thing b { color: var(--ink); font-weight: 600 }
+.dtoggle { display: inline-flex; gap: 4px; margin-top: 2px }
+.dtoggle button { font: 600 11px/1 var(--mono); padding: 6px 9px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer }
+.dtoggle button[aria-pressed="true"] { background: var(--ok); border-color: var(--ok); color: #fff }
+.dtoggle button.decoy[aria-pressed="true"] { background: var(--con); border-color: var(--con) }
+details.why { font-size: 13px; color: var(--muted) }
+details.why summary { cursor: pointer; font: 500 11.5px/1 var(--mono); color: var(--faint); list-style: none }
+details.why summary::-webkit-details-marker { display: none }
+details.why summary::before { content: "+ "; color: var(--ours) }
+details.why[open] summary::before { content: "− " }
+details.why p { margin-top: 6px; line-height: 1.5 }
+
+/* ---------- benchmark construction ---------- */
+.split { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: 40px; align-items: start; margin-top: 28px }
+.prose { display: grid; gap: 14px; max-width: 62ch; color: var(--muted) }
+.prose b { color: var(--ink) }
+.viewer { margin-top: 30px; padding: 18px; display: grid; gap: 16px }
+.vbar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center }
+.tpills { display: flex; gap: 6px; flex-wrap: wrap }
+.tpills button { font: 600 12px/1 var(--mono); padding: 8px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--glass-hi); color: var(--muted); cursor: pointer }
+.tpills button[aria-pressed="true"] { color: var(--ink); border-color: var(--line-strong); box-shadow: inset 0 -2px 0 var(--k, var(--ours)) }
+.vgrid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 2.2fr); gap: 16px; align-items: start }
+.wc { background: var(--glass-hi); border: 1px solid var(--line); border-radius: 16px; padding: 12px; min-width: 0 }
+.wc svg { width: 100%; height: auto; display: block }
+.wc .k { font: 500 11px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint) }
+.wc .tbl { fill: color-mix(in srgb, var(--ink) 4%, transparent); stroke: var(--line-strong); stroke-width: 1.2 }
+.wc .reach { fill: none; stroke-width: 1.2; stroke-dasharray: 4 5; opacity: .55; animation: spin 30s linear infinite; transform-box: fill-box; transform-origin: center }
+@keyframes spin { to { transform: rotate(360deg) } }
+.wc .pulse { fill: none; stroke-width: 1.4; transform-box: fill-box; transform-origin: center; animation: ring 2.6s ease-out infinite }
+.wc text { font: 600 11px var(--mono) }
+.wc .dim { stroke: var(--faint); stroke-width: 1 } .wc .dimt { fill: var(--faint); font-weight: 500; font-size: 10px }
+.shots { display: grid; gap: 10px; min-width: 0 }
+.rooms { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px }
+.cams { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px }
+.shot { position: relative; border-radius: 10px; overflow: hidden; background: var(--screen); margin: 0 }
+.shot .cell { width: 100%; aspect-ratio: 4 / 3; background-repeat: no-repeat; background-color: var(--screen); max-width: 100%; transition: transform .5s ease }
+.shot:hover .cell { transform: scale(1.06) }
+.shot figcaption { position: absolute; left: 6px; bottom: 6px; margin: 0; font: 600 9.5px/1 var(--mono); color: #fff; background: rgba(6, 9, 19, .62); padding: 4px 6px; border-radius: 4px }
+.shots .k { font: 500 11px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); margin-top: 4px }
+.rules { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 26px }
+.rule { padding: 18px; min-width: 0 }
+.rule .no { font: 600 11px/1 var(--mono); color: var(--ours); letter-spacing: .1em }
+.rule h4 { font-size: 18px; font-weight: 600; margin-top: 10px }
+.rule p { font-size: 14px; color: var(--muted); margin-top: 6px; line-height: 1.5 }
+
+/* ---------- method ---------- */
+.pipe { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin-top: 34px; position: relative }
+.pipe::before { content: ""; position: absolute; left: 4%; right: 4%; top: 35px; height: 2px; background: repeating-linear-gradient(90deg, var(--ours) 0 8px, transparent 8px 16px); animation: dash 1s linear infinite; opacity: .55; z-index: -1 }
+@keyframes dash { to { background-position: 16px 0 } }
+.step { padding: 16px; min-width: 0 }
+.step .sn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font: 600 14px/1 var(--mono); color: #fff; background: linear-gradient(135deg, var(--ours), var(--rea)); box-shadow: 0 0 0 6px var(--glass-hi), 0 0 22px -2px color-mix(in srgb, var(--ours) 70%, transparent) }
+.step h4 { font-size: 17px; font-weight: 600; margin-top: 14px; line-height: 1.25 }
+.step p { font-size: 13.5px; color: var(--muted); margin-top: 8px; line-height: 1.5 }
+.step code { font: 500 12px var(--mono); color: var(--ink); background: var(--glass-hi); padding: 1px 4px; border-radius: 4px }
+
+/* ---------- results ---------- */
+.bbbar { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 74px); z-index: 6; display: flex; justify-content: center; margin-top: 26px; pointer-events: none }
+.bbbar .glass { pointer-events: auto; display: inline-flex; align-items: center; gap: 12px; padding: 6px 6px 6px 16px; border-radius: 999px; font: 500 12px/1 var(--mono); color: var(--muted) }
+.block { display: grid; grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr); gap: 36px; align-items: center; margin-top: 70px }
+.block.flip { grid-template-columns: minmax(0, 1.18fr) minmax(0, .82fr) }
+.block.flip > :first-child { order: 2 }
+.block .tx h3 { margin-top: 10px }
+.block .tx .n { font: 600 12px/1 var(--mono); color: var(--ours); letter-spacing: .08em }
+.block .tx p { margin-top: 12px; color: var(--muted); font-size: 15.5px }
+.block .tx p.short { color: var(--ink); font-weight: 500; font-size: 16.5px }
+.chart { padding: 16px 16px 12px; min-width: 0 }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font: 500 11.5px/1.4 var(--mono); color: var(--muted); margin-top: 8px }
+.kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 20px }
+.kpi { padding: 14px; border-radius: 16px; background: var(--glass-hi); border: 1px solid var(--line) }
+.kpi b { display: block; font: 700 30px/1 var(--display); letter-spacing: -.03em; font-variant-numeric: tabular-nums }
+.kpi span { display: block; font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.35 }
+.kpi em { font-style: normal; font: 500 11px/1 var(--mono); color: var(--faint); display: block; margin-top: 6px }
+.ax text { fill: var(--muted); font: 500 11px var(--mono) } .ax line, .ax path { stroke: var(--line-strong) }
+.grid line { stroke: var(--line); stroke-dasharray: 2 4 }
+.lab { fill: var(--muted); font: 500 11px var(--mono) } .lab.ours { fill: var(--ours); font-weight: 600 }
+.om { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--ours) 65%, transparent)) }
+.mv { transition: transform .8s cubic-bezier(.2, .8, .2, 1), opacity .4s ease }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px }
+.chips button { font: 600 11.5px/1 var(--mono); padding: 7px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--glass-hi); color: var(--muted); cursor: pointer }
+.chips button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink) }
+.hm text { font: 600 11px var(--mono) }
+.hm .rl { fill: var(--muted); font-weight: 500 }
+.hm .hl { fill: none; stroke: var(--ours); stroke-width: 2; stroke-dasharray: 7 5; animation: march 1.2s linear infinite }
+@keyframes march { to { stroke-dashoffset: -24 } }
+.sq { transition: fill .4s ease }
+.waffles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px }
+.waffle { display: grid; gap: 6px; min-width: 0 }
+.waffle svg { width: 100%; height: auto; display: block }
+.waffle .w-n { font: 700 26px/1 var(--display); letter-spacing: -.02em; font-variant-numeric: tabular-nums }
+.waffle.ours .w-n { color: var(--ours) }
+.waffle .w-l { font: 500 11.5px/1.3 var(--mono); color: var(--muted) }
+.waffle.ours .w-l { color: var(--ink); font-weight: 600 }
+.sl path { fill: none; stroke-linecap: round }
+.draw { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); transition: stroke-dashoffset 1.4s cubic-bezier(.3, .7, .2, 1) }
+.drawn .draw { stroke-dashoffset: 0 }
+.tablebox { overflow-x: auto; margin-top: 18px; padding: 4px }
+table { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; min-width: 860px }
+th, td { padding: 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap }
+th:first-child, td:first-child { text-align: left }
+thead th { font: 600 11.5px/1.3 var(--mono); color: var(--muted); vertical-align: bottom }
+thead tr.grp th { border-bottom: 0; padding-bottom: 0 }
+tbody tr.ours td { font-weight: 700; background: color-mix(in srgb, var(--ours) 9%, transparent) }
+tbody tr.ours td:first-child { color: var(--ours) }
+tbody tr:last-child td { border-bottom: 0 }
+td.best { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; text-decoration-color: var(--ours) }
+.tip { position: fixed; z-index: 20; pointer-events: none; background: var(--glass-hi); color: var(--ink); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border: 1px solid var(--line-strong); font: 500 12px/1.45 var(--mono); padding: 8px 10px; border-radius: 10px; max-width: 260px; opacity: 0; transform: translateY(4px); transition: opacity .15s, transform .15s; box-shadow: var(--shadow) }
+.tip.on { opacity: 1; transform: none }
+
+/* cite */
+pre.bib { padding: 18px; font: 13px/1.6 var(--mono); overflow-x: auto; margin: 22px 0 0 }
+footer { padding-block: 60px 70px; color: var(--faint); font-size: 13px }
+
+@media (max-width: 1080px) {
+  .confs { grid-template-columns: repeat(3, minmax(0, 1fr)) }
+  .pipe { grid-template-columns: repeat(3, minmax(0, 1fr)) } .pipe::before { display: none }
+  .rules { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+  .tgrid { grid-template-columns: minmax(0, 1fr) }
+  .stats { grid-template-columns: repeat(3, minmax(0, 1fr)) } .stat:nth-child(3) { border-right: 0 } .stat:nth-child(-n+3) { border-bottom: 1px solid var(--line) }
+}
+@media (max-width: 860px) {
+  .paper-grid, .split, .block, .vgrid, .cards3, .suites { grid-template-columns: minmax(0, 1fr) }
+  .cv-cap { max-width: none; right: calc(var(--peek) + 20px) } .cv-copy h1 { font-size: clamp(54px, 15vw, 96px) } .cv-quote { display: none }
+  .block.flip { grid-template-columns: minmax(0, 1fr) }
+  .block.flip > :first-child { order: 0 }
+  .waffles { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+  .bar nav { display: none }
+}
+@media (max-width: 600px) {
+  .confs, .pipe, .rules { grid-template-columns: minmax(0, 1fr) }
+  .tcard { grid-template-columns: minmax(0, 1fr) }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)) } .stat { border-right: 0; border-bottom: 1px solid var(--line) }
+  .rooms { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+  .kpis { grid-template-columns: minmax(0, 1fr) }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important }
+  html { scroll-behavior: auto }
+  .js .rv { opacity: 1; transform: none }
+}
+
+/* ================= Bauhaus overrides ================= */
+.bgfx::before, .blob, .scan { display: none }
+.gridfx { background-image: linear-gradient(var(--dot) 1px, transparent 1px), linear-gradient(90deg, var(--dot) 1px, transparent 1px); background-size: 80px 80px; -webkit-mask-image: none; mask-image: none; animation: none }
+.glass { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--glass); border: 2px solid var(--ink); border-radius: 0; box-shadow: var(--shadow) }
+.grad { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: var(--con) }
+h1, h2, h3, h4 { font-weight: 700 }
+h2 { letter-spacing: -.035em; font-weight: 800 }
+body { font-size: 16.5px }
+.bar .in { border-radius: 0; background: var(--bg) }
+.bar nav a { border-radius: 0; font-weight: 500 } .bar nav a:hover, .bar nav a.on { background: var(--ink); color: var(--bg) }
+.brand { font-weight: 800; letter-spacing: .02em; text-transform: uppercase }
+.kicker b { background: var(--ink); color: var(--yellow); border: 0; box-shadow: none; border-radius: 0 }
+.kicker::after { height: 3px; width: 90px; background: linear-gradient(90deg, var(--con) 0 33%, var(--yellow) 33% 66%, var(--rea) 66%) }
+.btn { border-radius: 0; border: 2px solid var(--ink); background: var(--glass-hi); font-weight: 600; box-shadow: 3px 3px 0 var(--ink) }
+.btn:hover { transform: translate(-2px, -2px); box-shadow: 5px 5px 0 var(--ink) }
+.btn.primary { background: var(--con); color: #fff; border-color: var(--ink) }
+.seg, .seg button, .chips button, .vchips button, .tpills button, .dtoggle button, .replay, .pill { border-radius: 0 !important }
+.seg { border: 2px solid var(--ink); background: var(--glass-hi) }
+.seg button[aria-pressed="true"], .chips button[aria-pressed="true"] { background: var(--ink); color: var(--yellow) }
+.vchips button { border: 1.5px solid var(--ink); background: var(--glass-hi); color: var(--ink) }
+.vchips button[aria-pressed="true"], .tcard.con .vchips button[aria-pressed="true"] { background: var(--ink); color: var(--yellow) }
+.tpills button { border: 1.5px solid var(--ink); color: var(--ink) }
+.tpills button[aria-pressed="true"] { background: var(--k); color: #fff; box-shadow: none }
+.pill { border: 1.5px solid var(--ink); background: var(--yellow) }
+.replay { border: 1.5px solid var(--ink); background: var(--glass-hi); color: var(--ink) }
+/* cover */
+.cslide .card { border-radius: 0; border: 3px solid var(--ink); box-shadow: 10px 10px 0 var(--ink); filter: grayscale(1) contrast(1.05) brightness(.85) }
+.cslide.on .card { filter: none }
+.cv-copy h1 { font-weight: 800; letter-spacing: -.04em; text-transform: uppercase }
+.cv-shapes { display: flex; gap: 14px; align-items: center; justify-content: center; margin-bottom: 18px; animation: rise .9s cubic-bezier(.16, 1, .3, 1) both }
+.cv-shapes i { width: 34px; height: 34px; display: block }
+.cv-shapes .c { background: var(--con); border-radius: 50% } .cv-shapes .s { background: var(--yellow) } .cv-shapes .t { width: 0; height: 0; border-left: 19px solid transparent; border-right: 19px solid transparent; border-bottom: 34px solid var(--rea) }
+.cv-btn { border-radius: 0; border: 2px solid #fff; background: var(--con); -webkit-backdrop-filter: none; backdrop-filter: none }
+.cv-btn:hover { background: #fff; color: var(--ink) }
+.cv-nav { border-radius: 0; border: 2px solid var(--ink); background: var(--yellow); box-shadow: 3px 3px 0 var(--ink); -webkit-backdrop-filter: none; backdrop-filter: none }
+.cv-dots button { border-radius: 0; height: 10px; width: 10px; background: transparent; border: 2px solid var(--ink) }
+.cv-dots button[aria-current="true"] { width: 40px; background: var(--ink) }
+.cv-cap .prog span { background: var(--yellow) }
+/* stats and paper */
+.stat { border-right: 2px solid var(--ink) }
+.stat b { font-weight: 800 }
+.stat::before { content: ""; display: block; width: 14px; height: 14px; margin-bottom: 12px; background: var(--con) }
+.stat:nth-child(3n+2)::before { background: var(--yellow); border-radius: 50% }
+.stat:nth-child(3n)::before { width: 0; height: 0; background: none; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 14px solid var(--rea) }
+.figbox { border-radius: 0; border: 2px solid var(--ink); box-shadow: var(--shadow); outline: 0 }
+/* concept cards */
+.card::before { height: 8px; opacity: 1; background: var(--con) }
+.cards3 .card:nth-child(2)::before { background: var(--yellow) } .cards3 .card:nth-child(3)::before { background: var(--rea) }
+.card .ic { border-radius: 0; background: var(--yellow); border: 2px solid var(--ink) }
+.cards3 .card:nth-child(2) .ic { background: var(--con); border-radius: 50% } .cards3 .card:nth-child(3) .ic { background: var(--rea) }
+.cards3 .card:nth-child(2) .ic svg, .cards3 .card:nth-child(3) .ic svg { stroke: #fff }
+.card .math { border-radius: 0; border: 1.5px solid var(--ink); background: var(--glass-hi) }
+.suite .glow { display: none }
+.suite { border-left-width: 14px } .suite.con { border-left-color: var(--con) } .suite.rea { border-left-color: var(--rea) }
+.suite-row i { border-radius: 0; box-shadow: none } .suite-row.rea i { border-radius: 50% }
+.suite-row::after { height: 2px; background: var(--ink) }
+.conf .beats { color: var(--con); font-weight: 600 }
+.mini .need { fill: var(--ink) } .mini .ring { stroke: var(--con) }
+.mini .tb { fill: var(--glass-hi); stroke: var(--ink); stroke-width: 1.5 }
+/* task cards */
+.tcard { border-top-width: 8px } .tcard.con { border-top-color: var(--con) } .tcard.rea { border-top-color: var(--rea) }
+.tmedia, .mq, .shot, .wc, .kpi, .viewer { border-radius: 0 }
+.tmedia { border: 2px solid var(--ink) }
+.tid i { border-radius: 0; box-shadow: none } .tcard.rea .tid i { border-radius: 50% }
+.arm i { border: 2px solid var(--ink); background: var(--glass-hi); color: var(--ink) }
+.arm.work i { background: var(--ink); color: var(--yellow); border-color: var(--ink); box-shadow: none }
+.mq { border: 2px solid var(--ink) } .mq i { border-radius: 0 }
+.mq:hover { box-shadow: 4px 4px 0 var(--ink) }
+.wc { border: 2px solid var(--ink); background: var(--glass-hi) }
+.wc .tbl { fill: var(--cell0); stroke: var(--ink); stroke-width: 2 }
+.shot { border: 1.5px solid var(--ink) }
+.rule { border-top-width: 8px } .rules .rule:nth-child(1) { border-top-color: var(--con) } .rules .rule:nth-child(2) { border-top-color: var(--yellow) } .rules .rule:nth-child(3) { border-top-color: var(--rea) }
+.rule .no { color: var(--ink); font-size: 26px; font-weight: 600; letter-spacing: 0 }
+/* method */
+.pipe::before { height: 4px; background: repeating-linear-gradient(90deg, var(--ink) 0 14px, transparent 14px 22px); opacity: 1 }
+.step .sn { border-radius: 0; background: var(--con); color: #fff; border: 2px solid var(--ink); box-shadow: 0 0 0 6px var(--bg) }
+.pipe .step:nth-child(2) .sn { background: var(--yellow); color: var(--ink); border-radius: 50% }
+.pipe .step:nth-child(3) .sn { background: var(--rea) }
+.pipe .step:nth-child(4) .sn { background: var(--ink); color: var(--yellow); border-radius: 50% }
+.step code { border-radius: 0; background: var(--yellow); color: var(--ink) }
+/* results */
+.bbbar .glass { border-radius: 0 }
+.block .tx .n, .sub .n { color: var(--con); font-weight: 600 }
+.kpi { border: 2px solid var(--ink); background: var(--glass-hi) }
+.kpi:nth-child(2) b { color: var(--rea) } .kpi:nth-child(3) b { color: var(--ink) }
+.om { filter: none }
+.lab.ours { fill: var(--ink); font-weight: 700 }
+.waffle.ours .w-n { color: var(--con) }
+.hm .hl { stroke: var(--ink); stroke-width: 3 }
+.lb th { color: var(--ink); border-bottom: 2px solid var(--ink) }
+.lb .rk b { border-radius: 0; border: 2px solid var(--ink); background: var(--glass-hi) }
+.lb tr.top .rk b { background: var(--yellow); color: var(--ink); border-radius: 50%; border-color: var(--ink) }
+.lb .chip { border-radius: 0; background: var(--con) }
+.lb tr.ours .nm { color: var(--con) }
+.lb tbody tr.ours td { background: color-mix(in srgb, var(--yellow) 18%, transparent) }
+.lb th button[aria-pressed="true"]::after { color: var(--con) }
+.lb tr.ours td.on .lbbar i { background: var(--con) }
+.lb td.on .lbbar i { background: var(--ink) }
+.lb td.on .lbbar { border-radius: 0; height: 4px } .lb td.on .lbbar i { border-radius: 0 }
+.tip { border-radius: 0; border: 2px solid var(--ink); background: var(--glass-hi); box-shadow: 4px 4px 0 var(--ink); -webkit-backdrop-filter: none; backdrop-filter: none }
+pre.bib { border-radius: 0 }
+.hud { --c: var(--yellow) }
+</style>
+</head>
+<body>
+
+<script>document.documentElement.classList.add("js")</script>
+
+<div class="bgfx" aria-hidden="true"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="gridfx"></div><canvas id="field"></canvas><div class="scan"></div></div>
+
+<header class="bar">
+  <div class="wrap">
+    <div class="in glass">
+      <a class="brand" href="#top"><svg viewBox="0 0 26 26" aria-hidden="true"><circle cx="5" cy="13" r="3.4" fill="var(--con)"/><circle cx="21" cy="13" r="3.4" fill="var(--rea)"/><circle cx="13" cy="21" r="3.4" fill="var(--ours)"/><circle cx="13" cy="5" r="3" fill="none" stroke="var(--faint)" stroke-width="1.4" stroke-dasharray="2 2"/><path d="M5 13 13 21 21 13" fill="none" stroke="var(--line-strong)" stroke-width="1.2"/></svg>MRBench</a>
+      <nav aria-label="Sections">
+        <a href="#necessity">Necessity</a><a href="#tasks">Tasks</a><a href="#construction">Construction</a><a href="#method">MRScissors</a><a href="#results">Results</a><a href="#cite">Cite</a>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <section class="cover" id="cover" aria-roledescription="carousel" aria-label="Featured tasks">
+    <div class="cv-track" id="cv-track"></div>
+    <div class="cv-copy">
+      <div class="cv-shapes" aria-hidden="true"><i class="c"></i><i class="s"></i><i class="t"></i></div>
+      <p class="cv-quote">“Plurality is never to be posited without necessity.” · William of Ockham</p>
+      <h1>MRBench</h1>
+      <p class="cv-sub">Physical Necessity Reasoning in Heterogeneous Multi-Robot Manipulation</p>
+      <a class="cv-btn" href="#paper">Learn more <span aria-hidden="true">→</span></a>
+    </div>
+    <div class="cv-cap" id="cv-cap" aria-live="polite"></div>
+    <button class="cv-nav prev" type="button" aria-label="Previous clip">‹</button><button class="cv-nav next" type="button" aria-label="Next clip">›</button>
+    <div class="cv-dots" id="cv-dots" role="group" aria-label="Featured clips"></div>
+  </section>
+
+  <div class="wrap paper" id="paper">
+    <div class="paper-grid rv">
+      <div>
+        <div class="kicker"><b>Paper</b>under review</div>
+        <h2 class="paper-h">MRBench: Benchmarking Physical Necessity Reasoning in Heterogeneous Multi-Robot Manipulation</h2>
+        <p class="authors">Anonymous authors</p>
+      </div>
+      <div>
+        <p class="lede" style="margin-top:0">Which arms, or which passive objects in their place, does a task truly need, when the goal stays fixed and the minimal feasible team changes?</p>
+        <div class="links">
+          <a class="btn primary" aria-disabled="true">Paper <small>soon</small></a>
+          <a class="btn" aria-disabled="true">Code <small>soon</small></a>
+          <a class="btn" href="#tasks">All tasks</a>
+          <a class="btn" href="#leaderboard">Leaderboard</a>
+          <a class="btn" href="#cite">BibTeX</a>
+        </div>
+      </div>
+    </div>
+    <div class="stats glass rv">
+      <div class="stat"><b data-count="8">8</b><span>tasks in two suites</span></div>
+      <div class="stat"><b data-count="5">5</b><span>configurations per task</span></div>
+      <div class="stat"><b data-count="40">40</b><span>versions, 14 infeasible</span></div>
+      <div class="stat"><b data-count="480">480</b><span>scenes: 2 levels × 6 seeds each</span></div>
+      <div class="stat"><b data-count="3">3</b><span>robot models: Franka, PiPER, SO-101</span></div>
+      <div class="stat"><b><span class="grad" data-count="85.4" data-dec="1">85.4</span></b><span>MRScissors team accuracy (%), Qwen3.8-Max</span></div>
+    </div>
+    <figure class="rv">
+      <div class="figbox figwrap" data-fig="mrbench"><img src="assets/fig/mrbench.svg" alt="Two suites, two bottlenecks: concurrency-bound tasks need several arms at once, reach-bound tasks need every work site covered. On the right, one goal, five teams across the configurations."></div>
+      <figcaption><p><b>Physical necessity depends on what the task demands and what is on the table.</b> Left: Concurrency tasks need simultaneous actions; Reach tasks need every work site covered. Right: one goal, five different teams.</p><button class="replay" type="button" data-replay="mrbench">Replay</button></figcaption>
+    </figure>
+  </div>
+
+  <section id="necessity">
+    <div class="wrap">
+      <div class="kicker rv"><b>§ 3.1</b>MRBench</div>
+      <h2 class="rv">Physical necessity as a <span class="grad">minimal support set</span></h2>
+      <p class="lede rv">A task is a set of jobs done by doers; it needs several arms when jobs at different places must happen at once (Concurrency) or lie beyond one arm's reach (Reach).</p>
+      <div class="cards3">
+        <div class="card glass rv d1"><div class="ic"><svg viewBox="0 0 24 24"><circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="7" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8 8.5 10.5 16M16 8.5 13.5 16M8.5 7h7"/></svg></div>
+          <h3>Jobs</h3><p>Each job has sites, the poses where a hand must act, and a failure signal the simulator reports when it is not done. The jobs of a group must happen at once, such as a door held open while a box is drawn out.</p><span class="math">j ∈ J,&nbsp; sites S<sub>j</sub>,&nbsp; groups 𝒢 ⊆ 2<sup>J</sup></span></div>
+        <div class="card glass rv d2"><div class="ic"><svg viewBox="0 0 24 24"><path d="M5 20h6M8 20v-6l4-5 5 2"/><circle cx="8" cy="14" r="1.6"/><circle cx="12" cy="9" r="1.6"/><path d="M17 11l2.5 2.5M17 11l3-1"/><rect x="15" y="16" width="5" height="4" rx="1"/></svg></div>
+          <h3>Doers</h3><p>The arms, each a robot model at a fixed place, and the passive objects on the table, which can take over a job from an arm. An arm can do a job when it reaches every site with margin and its fingers open wide enough.</p><span class="math">c(a, j) = 1 &nbsp;⇔&nbsp; ρ<sub>a</sub>(s) ≥ δ<sub>j</sub> ∀s, &nbsp;w<sub>j</sub> ≤ o<sub>a</sub></span></div>
+        <div class="card glass rv d3"><div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></div>
+          <h3>Minimal support sets</h3><p>The smallest feasible teams. Any one of them is a right answer; the task is infeasible when there is none.</p><span class="math">MSS(A, P) = arg min<sub>T ⊆ A feasible</sub> |T|</span></div>
+      </div>
+      <div class="settles rv">An answer settles <span class="pill">minimality · who is needed</span><span class="pill">feasibility · whether it can be done</span><span class="pill">functional substitution · what can stand in for an arm</span></div>
+      <figure class="rv">
+        <div class="figbox figwrap" data-fig="problem" style="max-width:820px;margin:0 auto"><img src="assets/fig/problem.svg" alt="Arms, jobs and things for Spring Doors in the borrow configuration: the east arm is removed, and a 9 cm weight holds the east door open where a 4 cm one would not."></div>
+        <figcaption style="max-width:820px;margin-left:auto;margin-right:auto"><p>Spring Doors, borrow. With the east arm removed, the 9 cm weight does its job; the 4 cm one lets the lever pass over it.</p><button class="replay" type="button" data-replay="problem">Replay</button></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section id="tasks">
+    <div class="wrap">
+      <div class="kicker rv"><b>§ 3.2</b>MRBench</div>
+      <h2 class="rv">Task design</h2>
+      <p class="lede rv">Eight tasks in five configurations give 40 versions and 480 scenes. The instruction gives only the goal: no arm, role, step or tool.</p>
+      <div class="marq rv" id="marq" aria-label="Every version, in its card look and its rooms"></div>
+      <p class="note">Hover a scene to play its reference where a clip exists; click it to open that task below.</p>
+
+      <div class="sub rv"><span class="n">3.2.1</span><h3>Concurrency and Reach</h3></div>
+      <div class="suites">
+        <div class="suite glass con rv d1"><i class="glow"></i><div class="tag">Concurrency</div><h4>Three hands at once</h4><p>One more than a two-handed robot has: two bodies held while a third hand works (Con-01, Con-02), one held while two work (Con-03), or three held together (Con-04).</p></div>
+        <div class="suite glass rea rv d2"><i class="glow"></i><div class="tag">Reach</div><h4>No fixed arm reaches every place</h4><p>No two arms act at once. Bodies pass between arms by being set down, or each arm works where only it reaches.</p></div>
+      </div>
+      <figure class="rv">
+        <div class="figbox figwrap" data-fig="tasks"><img src="assets/fig/tasks.svg" alt="The eight tasks with their arms, the order of steps and each arm's timeline."></div>
+        <figcaption><p><b>Overview of the eight tasks in MRBench.</b> Each at a key moment of its scripted reference (exact, easy level), with its steps in order and when (Concurrency) or where (Reach) each arm works.</p><button class="replay" type="button" data-replay="tasks">Replay</button></figcaption>
+      </figure>
+
+      <div class="sub rv"><span class="n">3.2.2</span><h3>Five configurations</h3></div>
+      <p class="lede rv" style="margin-top:10px">They change only a task's doers; each but the reference defeats a shortcut that skips measuring.</p>
+      <div class="confs" id="confs"></div>
+
+      <div class="gal-head rv">
+        <div class="sub" style="margin-top:0"><span class="n">3.2.3</span><h3>All eight tasks, all five configurations</h3></div>
+        <div class="seg" role="group" aria-label="Level"><button type="button" data-lvl="easy" aria-pressed="true">easy</button><button type="button" data-lvl="hard" aria-pressed="false">hard</button></div>
+      </div>
+      <div class="suite-row con rv"><i style="background:var(--con)"></i>Concurrency <span>· several arms at the same moment</span></div>
+      <div class="tgrid" data-group="Con"></div>
+      <div class="suite-row rea rv"><i style="background:var(--rea)"></i>Reach <span>· an arm at every place the task goes</span></div>
+      <div class="tgrid" data-group="Rea"></div>
+      <p class="note">Video: the scripted reference at seed 0, played at 2×; a configuration without a clip shows a still of its scene. Easy and hard levels differ in one parameter. Arms: filled, in the minimal team; open, on the table but idle; dashed, absent.</p>
+    </div>
+  </section>
+
+  <section id="construction">
+    <div class="wrap">
+      <div class="kicker rv"><b>§ 3.3</b>MRBench</div>
+      <h2 class="rv">Benchmark construction</h2>
+      <div class="split">
+        <div class="rv">
+          <div class="sub" style="margin-top:0"><span class="n">3.3.1</span><h3>Workcell and scenes</h3></div>
+          <div class="prose" style="margin-top:14px">
+            <p>One table has three fixed places, <b>west</b> and <b>east</b> 1.4 m apart with <b>south</b> between, and a fourth, <b>north</b>, for the surplus arm; each takes a Franka, a PiPER or an SO-101. We simulate in Isaac Sim 4.5 with Isaac Lab 2.1.</p>
+            <p>Each version has 12 scenes (two levels, six seeds): the seed picks the room, recolors the task's objects and adds three everyday items.</p>
+          </div>
+        </div>
+        <div class="rv d1">
+          <div class="sub" style="margin-top:0"><span class="n">3.3.2</span><h3>Ground truth is computed</h3></div>
+          <div class="prose" style="margin-top:14px">
+            <p>The gold answer of a scene comes from IK with margins and an exact search for the smallest feasible teams.</p>
+            <p>In Isaac Sim the scripted references succeed in <b>all 312 feasible scenes</b>, and the distractors fail as designed in <b>all 96 borrow scenes</b>.</p>
+          </div>
+        </div>
+      </div>
+      <div class="viewer glass rv">
+        <div class="vbar">
+          <div class="tpills" id="sv-t" role="group" aria-label="Task"></div>
+          <div class="vchips" id="sv-v" role="group" aria-label="Configuration"></div>
+        </div>
+        <div class="vgrid">
+          <div class="wc">
+            <div class="k">Workcell, from above</div>
+            <svg id="wc" viewBox="0 0 340 236" aria-label="The table and the arms of this configuration"></svg>
+            <div class="verdict" id="sv-verdict" style="font-size:16px;margin-top:6px"></div>
+          </div>
+          <div class="shots">
+            <div class="k">The same scene in four looks</div>
+            <div class="rooms" id="sv-rooms"></div>
+            <div class="k">What a method sees: every camera</div>
+            <div class="cams" id="sv-cams"></div>
+          </div>
+        </div>
+      </div>
+      <p class="note">Cameras: card look, easy level, seed 0. Rooms: the main camera at seeds 0 to 2. Workcell drawn to scale for the places; the dashed circles mark the arms, not their reach.</p>
+
+      <div class="sub rv"><span class="n">3.4</span><h3>Protocol and metrics</h3></div>
+      <p class="lede rv" style="margin-top:10px">The protocol removes four conveniences that multi-robot benchmarks offer and real workcells do not.</p>
+      <div class="rules">
+        <div class="rule glass rv d1"><div class="no">01</div><h4>No team is given</h4><p>A method gets the goal, each arm's model, place and orientation, and the objects, but no role, skill list or reach.</p></div>
+        <div class="rule glass rv d2"><div class="no">02</div><h4>Feasibility is not promised</h4><p>14 of the 40 versions are infeasible, and “these jobs cannot all have a doer” is then the answer.</p></div>
+        <div class="rule glass rv d3"><div class="no">03</div><h4>Names do not decide</h4><p>A prop and its distractor look alike, and masses are given only within a factor of 0.75 to 1.3, so fitness must be measured.</p></div>
+        <div class="rule glass rv d4"><div class="no">04</div><h4>Failure is not proof</h4><p>A failed run's report names the jobs whose signals fired; only such a signal, not a missed grasp, counts against a smaller team.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="method">
+    <div class="wrap">
+      <div class="kicker rv"><b>§ 4</b>Method</div>
+      <h2 class="rv"><span class="grad">MRScissors</span></h2>
+      <p class="lede rv">The model writes what the task needs as a job graph, code measures who can do it into a capability table, and an exact search over that table returns the fewest arms.</p>
+      <div class="pipe">
+        <div class="step glass rv d1"><div class="sn">1</div><h4>Job graph from a blind prover</h4><p>One session writes the jobs, their sites and groups from the goal and the scene. It is not told which arms exist, so it cannot write the task to suit them.</p></div>
+        <div class="step glass rv d2"><div class="sn">2</div><h4>Measured capability table</h4><p>Code fills every cell from tool results: <code>who_can</code> for every arm at every site, <code>meet</code> for hand-overs, <code>measure</code> for objects.</p></div>
+        <div class="step glass rv d3"><div class="sn">3</div><h4>Exact search and certificate</h4><p>From one arm up, it returns every smallest team, with what each arm's removal leaves undone and each object used or rejected.</p></div>
+        <div class="step glass rv d4"><div class="sn">4</div><h4>Stand-in objects</h4><p>When no team exists, the prover, still blind, is told which jobs lack a doer and asked what on the table could take them over.</p></div>
+        <div class="step glass rv d4"><div class="sn">5</div><h4>Review with unequal burdens</h4><p>Two reviewers, blind to each other, look for what was written easier or harder than the task; every edit cites its own tool call.</p></div>
+      </div>
+      <figure class="rv">
+        <div class="figbox figwrap" data-fig="method" style="max-width:900px;margin:0 auto"><img src="assets/fig/method.svg" alt="MRScissors: a job graph from a blind prover, a capability table measured by tool calls, a certificate from exact search, and two reviewers with unequal burdens."></div>
+        <figcaption style="max-width:900px;margin-left:auto;margin-right:auto"><p><b>Overview of MRScissors</b> on Spring Doors, borrow: no east arm, two weights.</p><button class="replay" type="button" data-replay="method">Replay</button></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section id="results">
+    <div class="wrap">
+      <div class="kicker rv"><b>§ 5</b>Experiments</div>
+      <h2 class="rv">Main results</h2>
+      <p class="lede rv">Five methods, each given the same information, tools and output form, answer all 480 scenes in one shot with Qwen3.8-Max and with Claude Sonnet 5.5. Feasible answers are then carried out in Isaac Sim by a shared executor.</p>
+      <div class="bbbar"><div class="glass">Backbone <div class="seg" role="group" aria-label="Backbone"><button type="button" data-bb="Qwen3.8-Max" aria-pressed="true">Qwen3.8-Max</button><button type="button" data-bb="Claude Sonnet 5.5" aria-pressed="false">Claude Sonnet 5.5</button></div></div></div>
+
+      <div class="sub rv" id="leaderboard"><span class="n">Leaderboard</span><h3>Team-selection accuracy, one shot</h3></div>
+      <div class="lb-wrap glass rv"><table class="lb" id="lb"></table></div>
+      <p class="note">Accuracy (%) of the team named, 96 scenes per configuration and 480 in all. Task: all five configurations of a task-scene right. MSS-SR: right team and a successful run, on the 312 feasible scenes. Click a column to rank by it.</p>
+
+      <div class="block rv">
+        <div class="tx">
+          <div class="n">5.2.1</div>
+          <h3>MRScissors names the right team most often on both backbones</h3>
+          <p class="short" id="q1-short"></p>
+          <div class="kpis" id="kpis"></div>
+        </div>
+        <div class="chart glass"><svg id="c-q1" viewBox="0 0 640 300" aria-label="Team accuracy by configuration"></svg><div class="legend" id="lg-q1"></div></div>
+      </div>
+
+      <div class="block flip rv">
+        <div class="tx">
+          <div class="n">5.2.2</div>
+          <h3>The gap is widest at the task level</h3>
+          <p class="short" id="q4-short"></p>
+          <p>A task-scene, one task at one level and seed, counts only when all five of its configurations are right. Each square is one of the 96: rows are the eight tasks, columns the two levels and six seeds. Hover a square.</p>
+        </div>
+        <div class="chart glass"><div class="waffles" id="waffles"></div></div>
+      </div>
+
+      <div class="block rv">
+        <div class="tx">
+          <div class="n">5.2.3</div>
+          <h3>A swapped arm separates the methods most</h3>
+          <p class="short" id="hm-short"></p>
+          <p>Each cell is one task in one configuration, 12 scenes; deeper color, more scenes right. The dashed column is swapped, where what a new arm reaches has to be known.</p>
+        </div>
+        <div class="chart glass"><div class="chips" id="hm-chips" role="group" aria-label="Method"></div><svg id="c-hm" class="hm" viewBox="0 0 640 330" aria-label="Accuracy by task and configuration"></svg></div>
+      </div>
+
+      <div class="block flip rv">
+        <div class="tx">
+          <div class="n">5.2.4</div>
+          <h3>A stronger backbone teaches every method to say no</h3>
+          <p class="short" id="sl-short"></p>
+          <p>On shortfall the right answer is infeasible. Both backbones are shown at once.</p>
+        </div>
+        <div class="chart glass sl" id="sl-box"><svg id="c-sl" viewBox="0 0 640 280" aria-label="Shortfall accuracy on the two backbones"></svg></div>
+      </div>
+
+      <div class="block rv">
+        <div class="tx">
+          <div class="n">5.2.5</div>
+          <h3>MRScissors uses fewer tokens than every adapted method</h3>
+          <p class="short" id="q6-short"></p>
+          <p>Bubble area: model sessions per episode. Filled: Qwen3.8-Max; open: Claude Sonnet 5.5; a line joins a method's two backbones.</p>
+        </div>
+        <div class="chart glass"><svg id="c-q6" viewBox="0 0 640 280" aria-label="Accuracy against tokens per episode"></svg></div>
+      </div>
+
+      <div class="block flip rv">
+        <div class="tx">
+          <div class="n">5.3</div>
+          <h3>From the right team to task success</h3>
+          <p class="short" id="q5-short"></p>
+          <p><b>Right teams carry different solutions.</b> The executor carries out a method's whole answer, so success scores its solution as well as its team. MRScissors' steps are read off its certificate, where each job's doer is a measured cell.</p>
+        </div>
+        <div class="chart glass"><svg id="c-q5" viewBox="0 0 640 250" aria-label="Right team and success on feasible scenes"></svg><div class="legend"><span>● right team (%) → ○ right team and task done (MSS-SR, %), on the 312 feasible scenes</span></div></div>
+      </div>
+
+    </div>
+  </section>
+
+  <section id="cite">
+    <div class="wrap">
+      <div class="kicker rv"><b>Cite</b>BibTeX</div>
+      <pre class="bib glass rv" id="bib">@inproceedings{mrbench2026,
+  title  = {MRBench: Benchmarking Physical Necessity Reasoning in
+            Heterogeneous Multi-Robot Manipulation},
+  author = {Anonymous},
+  year   = {2026}
+}</pre>
+      <div style="margin-top:12px"><button class="replay" type="button" id="copybib">Copy BibTeX</button> <span class="note" id="copied" aria-live="polite"></span></div>
+    </div>
+  </section>
+</main>
+<footer><div class="wrap">MRBench project page. Simulation in Isaac Sim 4.5 and Isaac Lab 2.1.</div></footer>
+
+<script>
+const R = {"Qwen3.8-Max":{"LLM + solver":{"all":66.2,"task":10.4,"con":62.1,"rea":70.4,"exact":82.3,"surplus":87.5,"shortfall":60.4,"swapped":50.0,"borrow":51.0,"sr":15.4,"msssr":15.1,"team":72.4,"sr_right":20.8,"ktok":328,"sess":1.0,"cell":{"Con-01-exact":10,"Con-01-surplus":10,"Con-01-shortfall":6,"Con-01-swapped":7,"Con-01-borrow":7,"Con-02-exact":10,"Con-02-surplus":10,"Con-02-shortfall":9,"Con-02-swapped":5,"Con-02-borrow":4,"Con-03-exact":9,"Con-03-surplus":12,"Con-03-shortfall":7,"Con-03-swapped":5,"Con-03-borrow":4,"Con-04-exact":10,"Con-04-surplus":8,"Con-04-shortfall":6,"Con-04-swapped":5,"Con-04-borrow":5,"Rea-01-exact":8,"Rea-01-surplus":12,"Rea-01-shortfall":7,"Rea-01-swapped":8,"Rea-01-borrow":7,"Rea-02-exact":11,"Rea-02-surplus":10,"Rea-02-shortfall":7,"Rea-02-swapped":7,"Rea-02-borrow":11,"Rea-03-exact":11,"Rea-03-surplus":11,"Rea-03-shortfall":9,"Rea-03-swapped":4,"Rea-03-borrow":6,"Rea-04-exact":10,"Rea-04-surplus":11,"Rea-04-shortfall":7,"Rea-04-swapped":7,"Rea-04-borrow":5},"tl":"000010000001010000000000000000000000000000000000000010000000010000000101000010000000011000000000","err":{"correct":226,"false_feasible":76,"correct_infeasible":92,"over":6,"false_infeasible":20,"under":55,"equal_wrong_answer":5}},"SMART-LLM-style":{"all":72.5,"task":13.5,"con":73.8,"rea":71.2,"exact":94.8,"surplus":80.2,"shortfall":85.4,"swapped":53.1,"borrow":49.0,"sr":19.6,"msssr":18.3,"team":72.4,"sr_right":25.2,"ktok":641,"sess":3.0,"cell":{"Con-01-exact":12,"Con-01-surplus":11,"Con-01-shortfall":9,"Con-01-swapped":6,"Con-01-borrow":8,"Con-02-exact":11,"Con-02-surplus":11,"Con-02-shortfall":11,"Con-02-swapped":8,"Con-02-borrow":4,"Con-03-exact":12,"Con-03-surplus":9,"Con-03-shortfall":9,"Con-03-swapped":5,"Con-03-borrow":7,"Con-04-exact":12,"Con-04-surplus":8,"Con-04-shortfall":11,"Con-04-swapped":7,"Con-04-borrow":6,"Rea-01-exact":11,"Rea-01-surplus":9,"Rea-01-shortfall":9,"Rea-01-swapped":5,"Rea-01-borrow":4,"Rea-02-exact":12,"Rea-02-surplus":8,"Rea-02-shortfall":11,"Rea-02-swapped":4,"Rea-02-borrow":6,"Rea-03-exact":10,"Rea-03-surplus":9,"Rea-03-shortfall":12,"Rea-03-swapped":9,"Rea-03-borrow":4,"Rea-04-exact":11,"Rea-04-surplus":12,"Rea-04-shortfall":10,"Rea-04-swapped":7,"Rea-04-borrow":8},"tl":"000000000010010000000000100100000000000010010000000000000000011001000000000000000010001001000100","err":{"correct":226,"correct_infeasible":122,"false_infeasible":31,"false_feasible":46,"equal_wrong_answer":16,"under":30,"over":9}},"RoCo-style":{"all":61.0,"task":2.1,"con":57.9,"rea":64.2,"exact":85.4,"surplus":85.4,"shortfall":52.1,"swapped":46.9,"borrow":35.4,"sr":13.1,"msssr":12.8,"team":67.9,"sr_right":18.9,"ktok":1155,"sess":6.1,"cell":{"Con-01-exact":10,"Con-01-surplus":10,"Con-01-shortfall":6,"Con-01-swapped":9,"Con-01-borrow":4,"Con-02-exact":8,"Con-02-surplus":10,"Con-02-shortfall":8,"Con-02-swapped":4,"Con-02-borrow":4,"Con-03-exact":11,"Con-03-surplus":10,"Con-03-shortfall":6,"Con-03-swapped":4,"Con-03-borrow":2,"Con-04-exact":11,"Con-04-surplus":10,"Con-04-shortfall":5,"Con-04-swapped":1,"Con-04-borrow":6,"Rea-01-exact":8,"Rea-01-surplus":11,"Rea-01-shortfall":5,"Rea-01-swapped":5,"Rea-01-borrow":5,"Rea-02-exact":11,"Rea-02-surplus":11,"Rea-02-shortfall":8,"Rea-02-swapped":7,"Rea-02-borrow":4,"Rea-03-exact":11,"Rea-03-surplus":11,"Rea-03-shortfall":7,"Rea-03-swapped":8,"Rea-03-borrow":4,"Rea-04-exact":12,"Rea-04-surplus":9,"Rea-04-shortfall":5,"Rea-04-swapped":7,"Rea-04-borrow":5},"tl":"000010000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000","err":{"correct":212,"false_infeasible":30,"false_feasible":87,"correct_infeasible":81,"equal_wrong_answer":20,"under":46,"over":4}},"HMAS-2-style":{"all":75.0,"task":17.7,"con":75.8,"rea":74.2,"exact":95.8,"surplus":81.2,"shortfall":86.5,"swapped":64.6,"borrow":46.9,"sr":18.6,"msssr":17.0,"team":73.7,"sr_right":23.0,"ktok":765,"sess":7.8,"cell":{"Con-01-exact":10,"Con-01-surplus":11,"Con-01-shortfall":10,"Con-01-swapped":9,"Con-01-borrow":7,"Con-02-exact":12,"Con-02-surplus":12,"Con-02-shortfall":9,"Con-02-swapped":7,"Con-02-borrow":5,"Con-03-exact":12,"Con-03-surplus":10,"Con-03-shortfall":12,"Con-03-swapped":9,"Con-03-borrow":3,"Con-04-exact":11,"Con-04-surplus":10,"Con-04-shortfall":11,"Con-04-swapped":7,"Con-04-borrow":5,"Rea-01-exact":12,"Rea-01-surplus":10,"Rea-01-shortfall":11,"Rea-01-swapped":7,"Rea-01-borrow":8,"Rea-02-exact":12,"Rea-02-surplus":8,"Rea-02-shortfall":12,"Rea-02-swapped":7,"Rea-02-borrow":5,"Rea-03-exact":11,"Rea-03-surplus":9,"Rea-03-shortfall":8,"Rea-03-swapped":8,"Rea-03-borrow":7,"Rea-04-exact":12,"Rea-04-surplus":8,"Rea-04-shortfall":10,"Rea-04-swapped":8,"Rea-04-borrow":5},"tl":"000100110110000000000100001000000010100000001110000011000000000000000000000000000010000100100000","err":{"correct":230,"correct_infeasible":130,"false_feasible":38,"equal_wrong_answer":34,"under":13,"false_infeasible":20,"over":15}},"Ours v2":{"all":85.4,"task":43.8,"con":87.5,"rea":83.3,"exact":93.8,"surplus":96.9,"shortfall":93.8,"swapped":83.3,"borrow":59.4,"sr":46.8,"msssr":46.8,"team":83.7,"sr_right":55.9,"ktok":421,"sess":3.8,"cell":{"Con-01-exact":11,"Con-01-surplus":12,"Con-01-shortfall":9,"Con-01-swapped":12,"Con-01-borrow":6,"Con-02-exact":11,"Con-02-surplus":12,"Con-02-shortfall":12,"Con-02-swapped":12,"Con-02-borrow":8,"Con-03-exact":11,"Con-03-surplus":11,"Con-03-shortfall":12,"Con-03-swapped":10,"Con-03-borrow":10,"Con-04-exact":11,"Con-04-surplus":12,"Con-04-shortfall":12,"Con-04-swapped":9,"Con-04-borrow":7,"Rea-01-exact":12,"Rea-01-surplus":12,"Rea-01-shortfall":11,"Rea-01-swapped":8,"Rea-01-borrow":7,"Rea-02-exact":11,"Rea-02-surplus":11,"Rea-02-shortfall":12,"Rea-02-swapped":9,"Rea-02-borrow":8,"Rea-03-exact":11,"Rea-03-surplus":11,"Rea-03-shortfall":11,"Rea-03-swapped":8,"Rea-03-borrow":5,"Rea-04-exact":12,"Rea-04-surplus":12,"Rea-04-shortfall":11,"Rea-04-swapped":12,"Rea-04-borrow":6},"tl":"011100010100011110111100011011011000101110001001011100000001100000010011001101000000010101101001","err":{"correct":261,"false_feasible":19,"correct_infeasible":149,"equal_wrong_answer":18,"under":22,"false_infeasible":11}}},"Claude Sonnet 5.5":{"LLM + solver":{"all":78.1,"task":18.8,"con":77.1,"rea":79.2,"exact":94.8,"surplus":79.2,"shortfall":92.7,"swapped":68.8,"borrow":55.2,"sr":19.2,"msssr":18.9,"team":75.3,"sr_right":25.1,"ktok":282,"sess":1.0,"cell":{"Con-01-exact":12,"Con-01-surplus":8,"Con-01-shortfall":12,"Con-01-swapped":10,"Con-01-borrow":5,"Con-02-exact":12,"Con-02-surplus":10,"Con-02-shortfall":12,"Con-02-swapped":5,"Con-02-borrow":4,"Con-03-exact":12,"Con-03-surplus":9,"Con-03-shortfall":11,"Con-03-swapped":8,"Con-03-borrow":7,"Con-04-exact":11,"Con-04-surplus":10,"Con-04-shortfall":11,"Con-04-swapped":10,"Con-04-borrow":6,"Rea-01-exact":10,"Rea-01-surplus":7,"Rea-01-shortfall":10,"Rea-01-swapped":9,"Rea-01-borrow":9,"Rea-02-exact":11,"Rea-02-surplus":11,"Rea-02-shortfall":12,"Rea-02-swapped":6,"Rea-02-borrow":7,"Rea-03-exact":11,"Rea-03-surplus":11,"Rea-03-shortfall":12,"Rea-03-swapped":9,"Rea-03-borrow":6,"Rea-04-exact":12,"Rea-04-surplus":10,"Rea-04-shortfall":9,"Rea-04-swapped":9,"Rea-04-borrow":9},"tl":"000100100010000000000000000000000000001100000011100000000000001001000100101000000100000011010010","err":{"correct":235,"correct_infeasible":140,"false_infeasible":16,"under":44,"over":8,"false_feasible":28,"equal_wrong_answer":9}},"SMART-LLM-style":{"all":81.7,"task":32.3,"con":82.5,"rea":80.8,"exact":96.9,"surplus":82.3,"shortfall":94.8,"swapped":75.0,"borrow":59.4,"sr":23.4,"msssr":21.8,"team":79.2,"sr_right":27.5,"ktok":610,"sess":3.0,"cell":{"Con-01-exact":11,"Con-01-surplus":9,"Con-01-shortfall":12,"Con-01-swapped":8,"Con-01-borrow":8,"Con-02-exact":12,"Con-02-surplus":9,"Con-02-shortfall":11,"Con-02-swapped":10,"Con-02-borrow":10,"Con-03-exact":11,"Con-03-surplus":11,"Con-03-shortfall":11,"Con-03-swapped":10,"Con-03-borrow":5,"Con-04-exact":11,"Con-04-surplus":10,"Con-04-shortfall":11,"Con-04-swapped":9,"Con-04-borrow":9,"Rea-01-exact":12,"Rea-01-surplus":11,"Rea-01-shortfall":12,"Rea-01-swapped":9,"Rea-01-borrow":5,"Rea-02-exact":12,"Rea-02-surplus":11,"Rea-02-shortfall":12,"Rea-02-swapped":10,"Rea-02-borrow":5,"Rea-03-exact":12,"Rea-03-surplus":8,"Rea-03-shortfall":11,"Rea-03-swapped":8,"Rea-03-borrow":8,"Rea-04-exact":12,"Rea-04-surplus":10,"Rea-04-shortfall":11,"Rea-04-swapped":8,"Rea-04-borrow":7},"tl":"010100010101110100100110100000001001010010001100110000001000010000000101000011001000110100001000","err":{"correct":247,"correct_infeasible":145,"false_feasible":23,"under":31,"over":10,"equal_wrong_answer":9,"false_infeasible":15}},"RoCo-style":{"all":76.2,"task":21.9,"con":77.9,"rea":74.6,"exact":88.5,"surplus":76.0,"shortfall":91.7,"swapped":71.9,"borrow":53.1,"sr":16.7,"msssr":16.7,"team":71.5,"sr_right":23.3,"ktok":784,"sess":3.6,"cell":{"Con-01-exact":10,"Con-01-surplus":9,"Con-01-shortfall":12,"Con-01-swapped":9,"Con-01-borrow":8,"Con-02-exact":10,"Con-02-surplus":8,"Con-02-shortfall":11,"Con-02-swapped":7,"Con-02-borrow":6,"Con-03-exact":11,"Con-03-surplus":10,"Con-03-shortfall":11,"Con-03-swapped":9,"Con-03-borrow":9,"Con-04-exact":12,"Con-04-surplus":10,"Con-04-shortfall":11,"Con-04-swapped":10,"Con-04-borrow":4,"Rea-01-exact":11,"Rea-01-surplus":9,"Rea-01-shortfall":10,"Rea-01-swapped":11,"Rea-01-borrow":6,"Rea-02-exact":11,"Rea-02-surplus":9,"Rea-02-shortfall":10,"Rea-02-swapped":7,"Rea-02-borrow":4,"Rea-03-exact":11,"Rea-03-surplus":10,"Rea-03-shortfall":11,"Rea-03-swapped":9,"Rea-03-borrow":8,"Rea-04-exact":9,"Rea-04-surplus":8,"Rea-04-shortfall":12,"Rea-04-swapped":7,"Rea-04-borrow":6},"tl":"010000010001001100000010010010110100000000000000000001010000000100001000001110000110000000000001","err":{"correct":223,"under":38,"correct_infeasible":143,"false_feasible":25,"false_infeasible":27,"over":6,"equal_wrong_answer":18}},"HMAS-2-style":{"all":78.8,"task":32.3,"con":76.7,"rea":80.8,"exact":95.8,"surplus":77.1,"shortfall":93.8,"swapped":71.9,"borrow":55.2,"sr":23.1,"msssr":20.8,"team":76.0,"sr_right":27.4,"ktok":766,"sess":6.1,"cell":{"Con-01-exact":12,"Con-01-surplus":9,"Con-01-shortfall":11,"Con-01-swapped":10,"Con-01-borrow":8,"Con-02-exact":12,"Con-02-surplus":9,"Con-02-shortfall":11,"Con-02-swapped":7,"Con-02-borrow":7,"Con-03-exact":11,"Con-03-surplus":9,"Con-03-shortfall":10,"Con-03-swapped":10,"Con-03-borrow":6,"Con-04-exact":11,"Con-04-surplus":10,"Con-04-shortfall":10,"Con-04-swapped":7,"Con-04-borrow":4,"Rea-01-exact":12,"Rea-01-surplus":7,"Rea-01-shortfall":12,"Rea-01-swapped":9,"Rea-01-borrow":6,"Rea-02-exact":11,"Rea-02-surplus":12,"Rea-02-shortfall":12,"Rea-02-swapped":8,"Rea-02-borrow":5,"Rea-03-exact":12,"Rea-03-surplus":7,"Rea-03-shortfall":12,"Rea-03-swapped":8,"Rea-03-borrow":7,"Rea-04-exact":11,"Rea-04-surplus":11,"Rea-04-shortfall":12,"Rea-04-swapped":10,"Rea-04-borrow":10},"tl":"111000011101001110000000000100100010010010000001100000001000110000010011000010001000100111001001","err":{"correct":237,"correct_infeasible":141,"false_feasible":27,"under":13,"equal_wrong_answer":23,"over":18,"false_infeasible":21}},"Ours v2":{"all":91.2,"task":59.4,"con":91.7,"rea":90.8,"exact":99.0,"surplus":96.9,"shortfall":97.9,"swapped":95.8,"borrow":66.7,"sr":51.6,"msssr":51.6,"team":87.8,"sr_right":58.8,"ktok":452,"sess":3.9,"cell":{"Con-01-exact":12,"Con-01-surplus":12,"Con-01-shortfall":11,"Con-01-swapped":10,"Con-01-borrow":9,"Con-02-exact":12,"Con-02-surplus":11,"Con-02-shortfall":12,"Con-02-swapped":12,"Con-02-borrow":7,"Con-03-exact":12,"Con-03-surplus":12,"Con-03-shortfall":12,"Con-03-swapped":12,"Con-03-borrow":7,"Con-04-exact":12,"Con-04-surplus":12,"Con-04-shortfall":12,"Con-04-swapped":12,"Con-04-borrow":9,"Rea-01-exact":12,"Rea-01-surplus":11,"Rea-01-shortfall":12,"Rea-01-swapped":12,"Rea-01-borrow":6,"Rea-02-exact":11,"Rea-02-surplus":12,"Rea-02-shortfall":12,"Rea-02-swapped":10,"Rea-02-borrow":8,"Rea-03-exact":12,"Rea-03-surplus":12,"Rea-03-shortfall":12,"Rea-03-swapped":12,"Rea-03-borrow":9,"Rea-04-exact":12,"Rea-04-surplus":11,"Rea-04-shortfall":11,"Rea-04-swapped":12,"Rea-04-borrow":9},"tl":"011010001111101111000110111110100010100111111110010001010110010011110000011110111101110100111110","err":{"correct":274,"correct_infeasible":164,"false_feasible":4,"false_infeasible":12,"under":14,"equal_wrong_answer":12}}}};
+const VERS = {"Con-01-exact":{"feasible":true,"minimal":[["east","south","west"]],"things":[],"rejected":[],"missing":"","why":"both doors held open at once while a third hand draws the box out; neither end arm reaches the other's knob","slots":{"west":"panda","east":"panda","south":"panda"}},"Con-01-surplus":{"feasible":true,"minimal":[["east","south","west"]],"things":[],"rejected":[],"missing":"","why":"the north arm, behind the cabinet (moved back to y 0.70, clear of it), reaches neither knob nor the handle (IK): it stays idle","slots":{"west":"panda","east":"panda","south":"panda","north":"panda"}},"Con-01-shortfall":{"feasible":false,"minimal":[],"things":[],"rejected":[],"missing":"hold the east door open by its knob; draw the box out between the open doors by its handle","why":"two doors held and the box drawn out: three hands at once, two arms -- the south arm reaches the east knob, but then no hand draws the box (a run with west and south: the east door stayed shut)","slots":{"west":"panda","south":"panda"}},"Con-01-swapped":{"feasible":false,"minimal":[],"things":[],"rejected":[],"missing":"draw the box out between the open doors by its handle","why":"a PiPER on the south place reaches neither the box's handle in the box zone nor any other way to draw it out, and no other arm does: every place staffed, it cannot be done","slots":{"west":"panda","east":"panda","south":"piper"}},"Con-01-borrow":{"feasible":true,"minimal":[["south","west"]],"things":["block_2"],"rejected":["block_1"],"missing":"","why":"the 9 cm weight, set in the east lever's way back, holds the east door open: the west arm holds its own door, the south arm sets the weight and draws the box out; the 4 cm one lets the lever's bar pass over it","slots":{"west":"panda","south":"panda"}},"Con-02-exact":{"feasible":true,"minimal":[["east","south","west"]],"things":[],"rejected":[],"missing":"","why":"both leaves held level at once, each by its bar, which only the arm at its end reaches, while a third hand slides the pin through","slots":{"west":"panda","east":"panda","south":"panda"}},"Con-02-surplus":{"feasible":true,"minimal":[["east","north","west"],["east","south","west"],["north","south","west"]],"things":[],"rejected":[],"missing":"","why":"the north arm, east of the guard, can hold the orange leaf level in the east arm's place, and the east arm can then slide the pin in the south arm's: any three arms with the west one (only it reaches the blue leaf's bar); one arm idle","slots":{"west":"panda","east":"panda","south":"panda","north":"panda"}},"Con-02-shortfall":{"feasible":false,"minimal":[],"things":[],"rejected":[],"missing":"hold the blue leaf level by its bar","why":"two leaves held and the pin slid in: three hands, two arms; no arm but the west one reaches the blue leaf's bar outside the guard","slots":{"east":"panda","south":"panda"}},"Con-02-swapped":{"feasible":false,"minimal":[],"things":[],"rejected":[],"missing":"hold the blue leaf level by its bar","why":"an SO-101 on the west place reaches no part of the blue leaf's bar outside the guard, and no other arm does: every place staffed, it cannot be done","slots":{"west":"so101","east":"panda","south":"panda"}},"Con-02-borrow":{"feasible":true,"minimal":[["east","south"]],"things":["wedge_2"],"rejected":["wedge_1"],"missing":"","why":"the wedge whose top is 0.8 mm under the level bar, pushed in under it, holds the blue leaf level: the east arm holds the orange leaf, the south arm pushes the wedge and slides the pin; on the wedge 2 cm lower the leaf rests 4 degrees low","slots":{"east":"panda","south":"panda"}},"Con-03-exact":{"feasible":true,"minimal":[["east","south","west"]],"things":[],"rejected":[],"missing":"","why":"one hand holds the lid open the whole time the ball comes out, and the ball, wider than a hand opens, is taken between two hands","slots":{"west":"panda","east":"panda","south":"panda"}},"Con-03-surplus":{"feasible":true,"minimal":[["east","south","west"]],"things":[],"rejected":[],"missing":"","why":"the north arm can hold the lid only while it is nearly shut, and reaches neither side of the ball over the box: it stays idle","slots":{"west":"panda","east":"panda","south":"panda","north":"panda"}},"Con-03-shortfall":{"feasible":false,"minimal":[],"things":[],"rejected":[],"missing":"hold the lid open by its tab; lift the ball by its west side into the cradle; lift the ball by its east side into the cradle","why":"the lid held and the ball taken between two hands: three hands at once, two arms (the end arms reach the open lid's tab too, but then one hand is left for the ball)","slots":{"west":"panda","east":"panda"}},"Con-03-swapped":{"feasible":false,"minimal":[],"things":[],"rejected":[],"missing":"lift the ball by its west side into the cradle; lift the ball by its east side into the cradle","why":"a PiPER on the west place reaches neither side of the ball in the box: only the east arm lifts it, and two hands must -- every place staffed, it cannot be done","slots":{"west":"piper","east":"panda","south":"panda"}},"Con-03-borrow":{"feasible":true,"minimal":[["east","west"]],"things":["stay_1"],"rejected":["stay_2"],"missing":"","why":"","slots":{"west":"panda","east":"panda"}},"Con-04-exact":{"feasible":true,"minimal":[["east","south","west"]],"things":[],"rejected":[],"missing":"","why":"both bleed valves held shut and the foot valve's pedal held down at once: three hands; each lever's grip is reached only by the arm at its end of the table","slots":{"west":"panda","east":"panda","south":"panda"}},"Con-04-surplus":{"feasible":true,"minimal":[["east","north","south"],["east","north","west"],["east","south","west"],["north","south","west"]],"things":[],"rejected":[],"missing":"","why":"any three hands, one on each lever and one on the pedal: the north arm reaches either lever's grip (not the pedal), and an end arm whose lever it holds reaches the pedal","slots":{"west":"panda","east":"panda","south":"panda","north":"panda"}},"Con-04-shortfall":{"feasible":false,"minimal":[],"things":[],"rejected":[],"missing":"shut the west bleed valve: hold its lever down by its grip; shut the east bleed valve: hold its lever down by its grip; let air in: hold the foot valve's pedal down by its toe bar","why":"the two levers and the pedal held down at once: three hands, two arms (the end arms reach the pedal too, but their hands are on the levers)","slots":{"west":"panda","east":"panda"}},"Con-04-swapped":{"feasible":false,"minimal":[],"things":[],"rejected":[],"missing":"shut the west bleed valve: hold its lever down by its grip","why":"an SO-101 on the west place does not reach the west lever's grip, and no other arm does: every place staffed, it cannot be done","slots":{"west":"so101","east":"panda","south":"panda"}},"Con-04-borrow":{"feasible":true,"minimal":[["east","west"]],"things":["weight_1"],"rejected":["weight_2"],"missing":"","why":"the 2.4 kg weight, set in the pocket on the pedal, holds it down: an end arm sets it, then the two hold the levers; under the 1.2 kg one the pedal does not move","slots":{"west":"panda","east":"panda"}},"Rea-01-exact":{"feasible":true,"minimal":[["east","south","west"]],"things":[],"rejected":[],"missing":"","why":"neither end arm reaches the other's end nor any place in common: the apple passes through the middle arm","slots":{"west":"piper","south":"panda","east":"piper"}},"Rea-01-surplus":{"feasible":true,"minimal":[["north","west"]],"things":[],"rejected":[],"missing":"","why":"the north arm reaches over the partition: the west arm hands it the apple above the partition's west side and it puts it in the crate; south and east idle","slots":{"west":"piper","south":"panda","east":"piper","north":"panda"}},"Rea-01-shortfall":{"feasible":false,"minimal":[],"things":[],"rejected":[],"missing":"carry apple_0 from the start area into the crate","why":"the end arms share no place: no arm in the middle for them to hand to","slots":{"west":"piper","east":"piper"}},"Rea-01-swapped":{"feasible":false,"minimal":[],"things":[],"rejected":[],"missing":"carry apple_0 from the start area into the crate","why":"an SO-101 at the west end does not reach the start area behind it, and no other arm does: every place staffed, it cannot be done","slots":{"west":"so101","south":"panda","east":"piper"}},"Rea-01-borrow":{"feasible":true,"minimal":[["east","west"]],"things":["board_1"],"rejected":["board_2"],"missing":"","why":"the west arm stands each piece on the long board's east end and pushes the board through the channel; the east arm takes it off where it comes out; the short board leaves it in the channel's middle, out of both end arms' reach","slots":{"west":"piper","east":"piper"}},"Rea-02-exact":{"feasible":true,"minimal":[["east","south","west"]],"things":[],"rejected":[],"missing":"","why":"each channel starts where only one arm reaches it, and without the middle one the track has a gap","slots":{"west":"piper","south":"panda","east":"piper"}},"Rea-02-surplus":{"feasible":true,"minimal":[["east","south","west"],["north","south","west"]],"things":[],"rejected":[],"missing":"","why":"the north arm can bring the lowest channel to the table's middle, where the south arm takes it and lays it: the east or the north arm, with the west and the south arm; one arm idle","slots":{"west":"piper","south":"panda","east":"piper","north":"panda"}},"Rea-02-shortfall":{"feasible":false,"minimal":[],"things":[],"rejected":[],"missing":"lay the middle channel","why":"the middle channel lies out of the end arms' reach","slots":{"west":"piper","east":"piper"}},"Rea-02-swapped":{"feasible":true,"minimal":[["east","west"]],"things":[],"rejected":[],"missing":"","why":"a Franka on the east place reaches the middle channel where it lies and where it is laid, as well as the lowest: the west and the east arm lay the track, the south arm idle","slots":{"west":"piper","south":"panda","east":"panda"}},"Rea-02-borrow":{"feasible":true,"minimal":[["east","west"]],"things":["channel_4"],"rejected":["channel_5"],"missing":"","why":"the 1.30 m channel, laid by the west arm from the shelf into the lowest, does the upper and the middle channel's work: the west and the east arm; the 0.45 m one bridges nothing","slots":{"west":"piper","east":"piper"}},"Rea-03-exact":{"feasible":true,"minimal":[["east","south","west"]],"things":[],"rejected":[],"missing":"","why":"each gap is within reach of one arm only: the line is too long for fewer arms","slots":{"west":"piper","south":"piper","east":"piper"}},"Rea-03-surplus":{"feasible":true,"minimal":[["east","south","west"]],"things":[],"rejected":[],"missing":"","why":"the north arm reaches none of the gaps nor the waiting dominoes (IK): it stays idle","slots":{"west":"piper","south":"piper","east":"piper","north":"panda"}},"Rea-03-shortfall":{"feasible":false,"minimal":[],"things":[],"rejected":[],"missing":"fill place 12; fill place 13; fill place 14","why":"the middle gaps lie out of the end arms' reach","slots":{"west":"piper","east":"piper"}},"Rea-03-swapped":{"feasible":false,"minimal":[],"things":[],"rejected":[],"missing":"fill place 12; fill place 14","why":"an SO-101 on the south place cannot fill the middle gaps from the dominoes waiting for them, and no other arm reaches those gaps: every place staffed, it cannot be done","slots":{"west":"piper","south":"so101","east":"piper"}},"Rea-03-borrow":{"feasible":true,"minimal":[["east","west"]],"things":["plank_1"],"rejected":["plank_2"],"missing":"","why":"the 30 cm plank, stood by the west arm in the empty place 11, falls across the empty middle onto domino_14: the west and the east arm (the end places are still theirs alone); the other, by the seed 24 cm (it falls into the gap) or 36 cm (its side comes down on domino_14's top edge and stays leaning on it), sets nothing off","slots":{"west":"piper","east":"piper"}},"Rea-04-exact":{"feasible":true,"minimal":[["east","south","west"]],"things":[],"rejected":[],"missing":"","why":"each spill is within reach of one arm only: the counter is too long for fewer arms","slots":{"west":"piper","south":"piper","east":"piper"}},"Rea-04-surplus":{"feasible":true,"minimal":[["east","south","west"]],"things":[],"rejected":[],"missing":"","why":"the north arm reaches the sponge but no spill, pad or the sink (IK): it stays idle","slots":{"west":"piper","south":"piper","east":"piper","north":"panda"}},"Rea-04-shortfall":{"feasible":false,"minimal":[],"things":[],"rejected":[],"missing":"bring the sponge on from the west spill and wipe the middle one; bring the sponge on from the middle spill and wipe the east one","why":"the middle spill lies out of the end arms' reach: the sponge can be brought neither onto it nor on from it","slots":{"west":"piper","east":"piper"}},"Rea-04-swapped":{"feasible":true,"minimal":[["east","west"]],"things":[],"rejected":[],"missing":"","why":"a Franka on the east place, holding the sponge by its end, reaches the middle spill too (IK, the reach audit's 8.5 cm): the west arm wipes its spill and hands the sponge on, the east arm wipes the other two; the south arm idle","slots":{"west":"piper","south":"piper","east":"panda"}},"Rea-04-borrow":{"feasible":true,"minimal":[["east","west"]],"things":["mop_2"],"rejected":["mop_1"],"missing":"","why":"the west arm wipes its spill, leaves the sponge on pad A, clips it with the mop whose clip fits it, wipes the middle spill on the riser with it and leaves it where the east arm takes it; the other mop's clip, too narrow or too wide, takes the sponge no way","slots":{"west":"piper","east":"piper"}}};
+const CAMS = {"Con-01-exact":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Con-01-surplus":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south","wrist_east","wrist_north"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":4},"Con-01-shortfall":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Con-01-swapped":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Con-01-borrow":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Con-02-exact":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Con-02-surplus":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south","wrist_east","wrist_north"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":4},"Con-02-shortfall":{"cams":["main","top","front","west","east","north","wrist_south","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Con-02-swapped":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Con-02-borrow":{"cams":["main","top","front","west","east","north","wrist_south","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Con-03-exact":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Con-03-surplus":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south","wrist_east","wrist_north"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":4},"Con-03-shortfall":{"cams":["main","top","front","west","east","north","wrist_west","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Con-03-swapped":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Con-03-borrow":{"cams":["main","top","front","west","east","north","wrist_west","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Con-04-exact":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Con-04-surplus":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south","wrist_east","wrist_north"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":4},"Con-04-shortfall":{"cams":["main","top","front","west","east","north","wrist_west","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Con-04-swapped":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Con-04-borrow":{"cams":["main","top","front","west","east","north","wrist_west","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Rea-01-exact":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Rea-01-surplus":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south","wrist_east","wrist_north"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":4},"Rea-01-shortfall":{"cams":["main","top","front","west","east","north","wrist_west","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Rea-01-swapped":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Rea-01-borrow":{"cams":["main","top","front","west","east","north","wrist_west","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Rea-02-exact":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Rea-02-surplus":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south","wrist_east","wrist_north"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":4},"Rea-02-shortfall":{"cams":["main","top","front","west","east","north","wrist_west","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Rea-02-swapped":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Rea-02-borrow":{"cams":["main","top","front","west","east","north","wrist_west","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Rea-03-exact":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Rea-03-surplus":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south","wrist_east","wrist_north"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":4},"Rea-03-shortfall":{"cams":["main","top","front","west","east","north","wrist_west","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Rea-03-swapped":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Rea-03-borrow":{"cams":["main","top","front","west","east","north","wrist_west","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Rea-04-exact":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Rea-04-surplus":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south","wrist_east","wrist_north"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":4},"Rea-04-shortfall":{"cams":["main","top","front","west","east","north","wrist_west","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Rea-04-swapped":{"cams":["main","top","front","west","east","north","wrist_west","wrist_south","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3},"Rea-04-borrow":{"cams":["main","top","front","west","east","north","wrist_west","wrist_east"],"rooms":["kitchen","workshop","home"],"cols":4,"rows":3}};
+const TASKS = [
+  ["Con-01","Spring Doors","35 s","Open both doors · pull the box out · set it on the mat"],
+  ["Con-02","Hinged Leaves","25.2 s","Level both leaves · pin them together"],
+  ["Con-03","Spring Lid","28.4 s","Open the lid · lift the ball · set it in the cradle"],
+  ["Con-04","Pressure Test","7.8 s","Press both levers and the pedal, and hold"],
+  ["Rea-01","Cross-Zone Relay","28.7 s","To pad A · past the partition · into the crate"],
+  ["Rea-02","Tomato Flume","44 s","Lay the channels · let the tomato roll into the pot"],
+  ["Rea-03","Domino Run","49.4 s","Fill three gaps · tip the first domino"],
+  ["Rea-04","Wipe the Spills","55 s","Wipe your own spill and pass the sponge on"]];
+const CLIPS = {exact: "all", borrow: "all", decoy: "all", surplus: ["Con-02","Con-04","Rea-01","Rea-02"], swapped: ["Rea-02","Rea-04"]};
+const HARD = ["exact", "borrow", "decoy"];
+const VLIST = ["exact","surplus","shortfall","swapped","borrow"];
+const MODEL = {piper: "PiPER", panda: "Franka", so101: "SO-101"};
+const METHODS = ["LLM + solver","SMART-LLM-style","RoCo-style","HMAS-2-style","Ours v2"];
+const SHORT = {"LLM + solver": "LLM+solver", "SMART-LLM-style": "SMART-LLM", "RoCo-style": "RoCo", "HMAS-2-style": "HMAS-2", "Ours v2": "MRScissors"};
+const NAME = m => m === "Ours v2" ? "MRScissors" : m;
+const f1 = v => (Math.round(v * 10) / 10).toFixed(1);
+const ORDER = ["west","south","east","north"];
+const CAMNAME = {main: "main", top: "top", front: "front", west: "west", east: "east", north: "north", wrist_west: "W wrist", wrist_south: "S wrist", wrist_east: "E wrist", wrist_north: "N wrist"};
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const OTHERS = METHODS.slice(0, 4);
+let BB = "Qwen3.8-Max", LVL = "easy";
+const tname = t => TASKS.find(x => x[0] === t)[1];
+const hasClip = (kind, t) => { const c = CLIPS[kind]; return c === "all" || (c && c.includes(t)); };
+const teamOf = e => new Set(e.minimal[0] || []);
+const verdictText = e => { const team = teamOf(e); return e.feasible ? `${team.size} arm${team.size > 1 ? "s" : ""}: ${ORDER.filter(s => team.has(s)).map(s => s[0].toUpperCase()).join(" · ")}` : "Infeasible"; };
+
+/* ---------- background: a slow Bauhaus composition of flat shapes ---------- */
+(() => {
+  const cv = document.getElementById("field"), cx = cv.getContext("2d");
+  let W = 0, H = 0, shapes = [], col = {}, raf = 0, last = 0;
+  const ptr = {x: .5, y: .5};
+  function readCols() { const p = document.createElement("span"); document.body.appendChild(p);
+    ["con", "rea", "yellow", "ink"].forEach(v => { p.style.color = `var(--${v})`; col[v] = getComputedStyle(p).color; }); p.remove(); }
+  const KINDS = ["circle", "square", "tri", "half", "bar", "ring", "circle", "square"], COLS = ["con", "rea", "yellow", "ink", "yellow", "con", "rea"];
+  function mk(i) { const s = 50 + Math.random() * 210; return {k: KINDS[i % KINDS.length], c: COLS[(i * 3) % COLS.length], s, x: Math.random() * W, y: Math.random() * H, a: Math.random() * 6.28,
+    va: (Math.random() - .5) * .0016, vx: (Math.random() - .5) * .12, vy: (Math.random() - .5) * .12, z: .3 + Math.random() * .9}; }
+  function size() { const dpr = Math.min(devicePixelRatio || 1, 1.5); W = innerWidth; H = innerHeight; cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + "px"; cv.style.height = H + "px"; cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const n = Math.round(Math.min(13, Math.max(7, W * H / 110000))); while (shapes.length < n) shapes.push(mk(shapes.length)); shapes.length = n; }
+  function draw(sh, x, y) {
+    cx.save(); cx.translate(x, y); cx.rotate(sh.a); cx.globalAlpha = sh.c === "ink" ? .06 : .11; cx.fillStyle = cx.strokeStyle = col[sh.c]; const s = sh.s;
+    cx.beginPath();
+    if (sh.k === "circle") { cx.arc(0, 0, s / 2, 0, 6.283); cx.fill(); }
+    else if (sh.k === "square") { cx.fillRect(-s / 2, -s / 2, s, s); }
+    else if (sh.k === "tri") { cx.moveTo(0, -s / 2); cx.lineTo(s / 2, s / 2); cx.lineTo(-s / 2, s / 2); cx.closePath(); cx.fill(); }
+    else if (sh.k === "half") { cx.arc(0, 0, s / 2, 0, 3.1416); cx.closePath(); cx.fill(); }
+    else if (sh.k === "bar") { cx.fillRect(-s * .9, -s / 14, s * 1.8, s / 7); }
+    else { cx.lineWidth = s / 9; cx.arc(0, 0, s / 2.4, 0, 6.283); cx.stroke(); }
+    cx.restore();
+  }
+  function frame(t) {
+    const dt = Math.min(48, (t - last) || 16) / 16; last = t; cx.clearRect(0, 0, W, H);
+    for (const sh of shapes) {
+      if (!reduce) { sh.x += sh.vx * dt; sh.y += sh.vy * dt; sh.a += sh.va * dt; const m = sh.s; if (sh.x < -m) sh.x = W + m; if (sh.x > W + m) sh.x = -m; if (sh.y < -m) sh.y = H + m; if (sh.y > H + m) sh.y = -m; }
+      const px = (ptr.x - .5) * 30 * sh.z, py = (ptr.y - .5) * 30 * sh.z - scrollY * .06 * sh.z;
+      draw(sh, sh.x + px, ((sh.y + py) % (H + 2 * sh.s) + H + 2 * sh.s) % (H + 2 * sh.s) - sh.s);
+    }
+    if (!reduce) raf = requestAnimationFrame(frame);
+  }
+  readCols(); size(); requestAnimationFrame(frame);
+  addEventListener("resize", () => { size(); if (reduce) requestAnimationFrame(frame); });
+  addEventListener("pointermove", e => { ptr.x = e.clientX / innerWidth; ptr.y = e.clientY / innerHeight; }, {passive: true});
+  document.addEventListener("visibilitychange", () => { cancelAnimationFrame(raf); if (!document.hidden && !reduce) { last = performance.now(); raf = requestAnimationFrame(frame); } });
+})();
+
+/* ---------- helpers ---------- */
+const tipEl = document.createElement("div"); tipEl.className = "tip"; tipEl.setAttribute("role", "status"); document.body.appendChild(tipEl);
+function bindTip(node, html) {
+  const place = e => { const w = tipEl.offsetWidth, h = tipEl.offsetHeight; let x = e.clientX + 14, y = e.clientY - h - 12;
+    if (x + w > innerWidth - 8) x = e.clientX - w - 14; if (y < 8) y = e.clientY + 16; tipEl.style.left = x + "px"; tipEl.style.top = y + "px"; };
+  node.addEventListener("pointerenter", e => { tipEl.innerHTML = typeof html === "function" ? html() : html; tipEl.classList.add("on"); place(e); });
+  node.addEventListener("pointermove", place);
+  node.addEventListener("pointerleave", () => tipEl.classList.remove("on"));
+}
+function whenSeen(node, fn, threshold = .3) {
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { fn(); io.disconnect(); } }), {threshold});
+  io.observe(node);
+}
+const rvio = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add("in"); rvio.unobserve(e.target); } }), {threshold: .12, rootMargin: "0px 0px -6% 0px"});
+document.querySelectorAll(".rv").forEach(n => rvio.observe(n));
+function countUp(node, to, dec = 0) {
+  const from = parseFloat(node.dataset.now || "0"); node.dataset.now = to;
+  if (reduce) { node.textContent = to.toFixed(dec); return; }
+  const t0 = performance.now(), dur = 1300;
+  const step = t => { const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3); node.textContent = (from + (to - from) * e).toFixed(dec); if (k < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+document.querySelectorAll("[data-count]").forEach(n => { const to = parseFloat(n.dataset.count), dec = +(n.dataset.dec || 0); n.textContent = (0).toFixed(dec); whenSeen(n, () => countUp(n, to, dec), .5); });
+/* active nav link */
+const navs = [...document.querySelectorAll(".bar nav a")];
+const secio = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) navs.forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + e.target.id)); }), {rootMargin: "-45% 0px -50% 0px"});
+document.querySelectorAll("main section[id]").forEach(s => secio.observe(s));
+
+/* ---------- paper figures: inline the SVG, draw it in step by step ---------- */
+function play(box) {
+  if (reduce || !box.querySelector("svg")) return;
+  box.classList.remove("play"); box.classList.add("prep"); void box.offsetWidth;
+  requestAnimationFrame(() => { box.classList.remove("prep"); box.classList.add("play"); });
+}
+document.querySelectorAll(".figwrap").forEach(box => {
+  fetch(`assets/fig/${box.dataset.fig}.svg`).then(r => r.ok ? r.text() : Promise.reject()).then(t => { box.innerHTML = t; whenSeen(box, () => play(box), .35); }).catch(() => {});
+});
+document.querySelectorAll("[data-replay]").forEach(b => b.addEventListener("click", () => play(document.querySelector(`.figwrap[data-fig="${b.dataset.replay}"]`))));
+
+/* ---------- cover carousel ---------- */
+(() => {
+  const FEAT = [["Con-01","exact"],["Rea-02","swapped"],["Con-03","borrow"],["Rea-03","exact"],["Con-04","exact"],["Rea-04","swapped"],["Con-02","borrow"],["Rea-01","surplus"]];
+  const track = document.getElementById("cv-track"), cap = document.getElementById("cv-cap"), dots = document.getElementById("cv-dots"), CAP = 10;
+  let idx = 0, visible = true;
+  track.innerHTML = FEAT.map(([t, v], i) => `<button type="button" class="cslide" aria-label="${tname(t)}, ${v}"><div class="card"><img src="assets/img/${t}-${v}.jpg" alt="" loading="${i < 2 ? "eager" : "lazy"}"></div></button>`).join("");
+  dots.innerHTML = FEAT.map(([t, v]) => `<button type="button" aria-label="${tname(t)}, ${v}"></button>`).join("");
+  const slides = [...track.children];
+  slides.forEach((b, i) => b.onclick = () => { if (i !== idx) go(i); });
+  [...dots.children].forEach((b, i) => b.onclick = () => go(i));
+  document.querySelector(".cv-nav.prev").onclick = () => go((idx + FEAT.length - 1) % FEAT.length);
+  document.querySelector(".cv-nav.next").onclick = () => go((idx + 1) % FEAT.length);
+  function place() { const sw = slides[0].offsetWidth, w = sw + (parseFloat(getComputedStyle(track).columnGap) || 16), peek = (track.clientWidth - sw) / 2; track.style.transform = `translateX(${peek - idx * w}px)`; }
+  function go(i) {
+    const old = slides[idx].querySelector("video"); if (old) old.remove();
+    idx = i; place();
+    slides.forEach((b, j) => { b.classList.toggle("on", j === i); b.setAttribute("aria-current", j === i); });
+    [...dots.children].forEach((b, j) => b.setAttribute("aria-current", j === i));
+    const [t, v] = FEAT[i], e = VERS[`${t}-${v}`];
+    cap.innerHTML = `<div class="id"><i style="background:var(${t[0] === "C" ? "--con" : "--rea"})"></i>${t} · ${t[0] === "C" ? "Concurrency" : "Reach"} · ${v}</div><b>${tname(t)}</b><div class="ans">minimal team · ${verdictText(e)}${e.things.length ? " + an object" : ""}</div><div class="prog"><span></span></div>`;
+    if (reduce) return;
+    const vd = document.createElement("video"); Object.assign(vd, {muted: true, playsInline: true, preload: "auto", src: `assets/video/${t}-${v}.mp4`}); vd.setAttribute("muted", "");
+    vd.style.opacity = 0; vd.style.transition = "opacity .6s";
+    vd.addEventListener("playing", () => vd.style.opacity = 1, {once: true});
+    vd.addEventListener("timeupdate", () => { const lim = Math.min(vd.duration || CAP, CAP), bar = cap.querySelector(".prog span"); if (bar) bar.style.width = Math.min(100, vd.currentTime / lim * 100) + "%"; if (vd.currentTime >= lim - .05 && idx === i) go((i + 1) % FEAT.length); });
+    vd.addEventListener("ended", () => { if (idx === i) go((i + 1) % FEAT.length); });
+    slides[i].querySelector(".card").appendChild(vd);
+    if (visible) vd.play().catch(() => {});
+  }
+  new IntersectionObserver(es => es.forEach(e => { visible = e.isIntersecting; const v = slides[idx].querySelector("video"); if (!v) return; visible ? v.play().catch(() => {}) : v.pause(); }), {threshold: .2}).observe(track);
+  addEventListener("resize", place);
+  addEventListener("keydown", e => { if (!visible || /input|textarea/i.test(document.activeElement.tagName)) return; if (e.key === "ArrowRight") go((idx + 1) % FEAT.length); if (e.key === "ArrowLeft") go((idx + FEAT.length - 1) % FEAT.length); });
+  go(0);
+})();
+
+/* ---------- five configurations, as small workcells ---------- */
+(() => {
+  const P = {W: [26, 48], S: [60, 70], E: [94, 48], N: [60, 22]};
+  const C = [
+    ["exact", "reference", {W: "need", S: "need", E: "need"}, "The reference team. All three arms are needed.", "the reference"],
+    ["surplus", "+1 arm", {W: "need", S: "need", E: "need", N: "idle"}, "A redundant Franka at N, never needed for feasibility.", "defeats staffing by presence"],
+    ["shortfall", "−1 arm", {W: "need", S: "need", E: "gone"}, "A needed arm is removed: no team is feasible, and the answer names the job without a doer.", "defeats presumed feasibility"],
+    ["swapped", "new model", {W: "need", S: "need", E: "swap"}, "One arm is traded for another model: every place staffed yet infeasible, or two arms suffice.", "defeats roles by place"],
+    ["borrow", "+ object", {W: "need", S: "need", E: "gone"}, "A needed arm becomes a prop that can do its job beside a distractor that cannot.", "defeats substitution by appearance"]];
+  document.getElementById("confs").innerHTML = C.map(([v, tag, arms, txt, beats], i) => {
+    let g = `<rect class="tb" x="6" y="12" width="108" height="66" rx="8"/>`;
+    for (const [s, st] of Object.entries(arms)) {
+      const [x, y] = P[s];
+      if (st === "need") g += `<circle class="ring" cx="${x}" cy="${y}" r="9" style="animation-delay:${(i * .3 + x / 60).toFixed(2)}s"/><circle class="need" cx="${x}" cy="${y}" r="9"/><text x="${x}" y="${y + 3}" text-anchor="middle">${s}</text>`;
+      else if (st === "idle") g += `<circle class="idle" cx="${x}" cy="${y}" r="9"/><text class="o" x="${x}" y="${y + 3}" text-anchor="middle">${s}</text>`;
+      else if (st === "gone") g += `<circle class="gone" cx="${x}" cy="${y}" r="9"/><text class="o" x="${x}" y="${y + 3}" text-anchor="middle">${s}</text>`;
+      else g += `<path class="swap" d="M${x} ${y - 11}L${x + 11} ${y}L${x} ${y + 11}L${x - 11} ${y}Z"/><text x="${x}" y="${y + 3}" text-anchor="middle">${s}</text>`;
+    }
+    if (v === "borrow") g += `<rect class="prop" x="74" y="24" width="10" height="13" rx="2"/><rect class="dist" x="88" y="28" width="10" height="9" rx="2"/>`;
+    if (v === "shortfall") g += `<text class="o" x="60" y="30" text-anchor="middle" style="fill:var(--con)">∅ no team</text>`;
+    return `<div class="conf glass rv d${Math.min(i, 4)}"><div class="nm">${v}<span>${tag}</span></div><svg class="mini" viewBox="0 0 120 86" aria-hidden="true">${g}</svg><p>${txt}</p><div class="beats">${beats}</div></div>`;
+  }).join("");
+  document.querySelectorAll("#confs .rv").forEach(n => rvio.observe(n));
+})();
+
+/* ---------- all eight tasks ---------- */
+const CARDS = {};
+function armsHTML(e) {
+  const team = teamOf(e);
+  return ORDER.map(s => { const here = e.slots[s], st = !here ? "gone" : team.has(s) ? "work" : "idle";
+    return `<div class="arm ${st}"><i>${s[0].toUpperCase()}</i>${!here ? "absent" : (MODEL[here] || here)}</div>`; }).join("");
+}
+function buildCards() {
+  ["Con", "Rea"].forEach(g => {
+    const host = document.querySelector(`.tgrid[data-group="${g}"]`);
+    TASKS.filter(x => x[0].startsWith(g)).forEach(([id, nm, ref, steps], i) => {
+      const c = document.createElement("article"); c.className = `tcard glass ${g.toLowerCase()} rv d${i % 2 + 1}`;
+      c.innerHTML = `<div class="tmedia"></div><div class="tinfo"><div class="tid"><i></i>${id} · reference ${ref.replace(" ", "\u00a0")}</div><h4>${nm}</h4><p class="tsteps">${steps}</p>
+        <div class="vchips" role="group" aria-label="Configuration">${VLIST.map(v => `<button type="button" data-v="${v}">${v}</button>`).join("")}</div>
+        <div class="arms"></div><div class="verdict"></div><div class="thing"></div><details class="why"><summary>Why this team</summary><p></p></details></div>`;
+      host.appendChild(c); rvio.observe(c);
+      const st = CARDS[id] = {el: c, v: "exact", decoy: false, seen: false};
+      c.querySelectorAll("[data-v]").forEach(b => b.onclick = () => { st.v = b.dataset.v; st.decoy = false; card(id); });
+      new IntersectionObserver(es => es.forEach(e => { st.seen = e.isIntersecting; const v = c.querySelector("video"); if (!v) return; if (st.seen && !reduce) v.play().catch(() => {}); else v.pause(); }), {threshold: .35}).observe(c.querySelector(".tmedia"));
+      card(id);
+    });
+  });
+}
+function card(id) {
+  const st = CARDS[id], c = st.el, e = VERS[`${id}-${st.v}`], m = c.querySelector(".tmedia"), nm = tname(id);
+  c.querySelectorAll("[data-v]").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === st.v));
+  const kind = st.v === "borrow" && st.decoy ? "decoy" : st.v, hard = LVL === "hard" && HARD.includes(kind) && hasClip(kind, id);
+  let tag;
+  if (hasClip(kind, id)) {
+    m.innerHTML = `<video class="fade" src="assets/video/${id}-${kind}${hard ? "-hard" : ""}.mp4" poster="assets/img/${id}-${st.v}.jpg" muted loop playsinline preload="none" aria-label="${nm}, ${kind}"></video>`;
+    tag = `${kind === "decoy" ? "distractor in place of the prop · fails" : "reference"} · ${hard ? "hard" : "easy"}`;
+    const v = m.querySelector("video"); if (st.seen && !reduce) v.play().catch(() => {});
+  } else {
+    m.innerHTML = `<img class="fade" src="assets/img/${id}-${st.v}.jpg" alt="${nm}, ${st.v}" loading="lazy">`;
+    tag = st.v === "shortfall" ? "scene · no team can finish" : "scene";
+  }
+  m.insertAdjacentHTML("beforeend", `<div class="hud"></div><span class="tag">${tag}</span>`);
+  c.querySelector(".arms").innerHTML = armsHTML(e);
+  const vd = c.querySelector(".verdict"); vd.className = "verdict" + (e.feasible ? "" : " no"); vd.textContent = verdictText(e) + (e.minimal.length > 1 ? ` (${e.minimal.length} smallest teams)` : "");
+  const th = c.querySelector(".thing");
+  if (e.things.length) {
+    th.innerHTML = `<b>Uses</b> ${e.things.join(", ").replace(/_/g, " ")}; <b>not</b> the look-alike ${e.rejected.join(", ").replace(/_/g, " ")}.<div class="dtoggle" role="group" aria-label="Object shown"><button type="button" class="prop" aria-pressed="${!st.decoy}">the prop</button><button type="button" class="decoy" aria-pressed="${st.decoy}">the look-alike</button></div>`;
+    th.querySelector(".prop").onclick = () => { st.decoy = false; card(id); };
+    th.querySelector(".decoy").onclick = () => { st.decoy = true; card(id); };
+  } else th.innerHTML = e.feasible ? "" : `<b>Left undone:</b> ${e.missing}.`;
+  c.querySelector(".why p").textContent = e.why.charAt(0).toUpperCase() + e.why.slice(1) + ".";
+}
+buildCards();
+document.querySelectorAll("[data-lvl]").forEach(b => b.addEventListener("click", () => {
+  LVL = b.dataset.lvl; document.querySelectorAll("[data-lvl]").forEach(x => x.setAttribute("aria-pressed", x === b)); Object.keys(CARDS).forEach(card); }));
+
+/* ---------- scene viewer: workcell, rooms and cameras ---------- */
+const SV = {t: "Rea-02", v: "swapped"};
+function cell(key, i) {
+  const e = CAMS[key], c = i % e.cols, r = Math.floor(i / e.cols);
+  return `background-image:url(assets/cam/${key}.jpg);background-size:${e.cols * 100}% ${e.rows * 100}%;background-position:${e.cols > 1 ? c / (e.cols - 1) * 100 : 0}% ${e.rows > 1 ? r / (e.rows - 1) * 100 : 0}%`;
+}
+function workcell(e) {
+  /* to scale: 100 px per metre, table 3.2 x 1.8 m drawn 2.8 x 1.8 for the column; places from the repository */
+  const X = x => 170 + x * 100, Y = y => 120 - y * 100, POS = {west: [-.7, 0], south: [0, -.7], east: [.7, 0], north: [0, .7]}, team = teamOf(e);
+  let g = `<rect class="tbl" x="30" y="30" width="280" height="180" rx="14"/>`;
+  g += `<line class="dim" x1="${X(-.7)}" x2="${X(.7)}" y1="16" y2="16"/><line class="dim" x1="${X(-.7)}" x2="${X(-.7)}" y1="11" y2="21"/><line class="dim" x1="${X(.7)}" x2="${X(.7)}" y1="11" y2="21"/><text class="dimt" x="${X(-.35)}" y="12" text-anchor="middle">1.4 m</text>`;
+  ORDER.forEach(s => {
+    const [x, y] = POS[s], here = e.slots[s], cx = X(x), cy = Y(y), on = team.has(s), k = on ? "var(--ours)" : "var(--faint)";
+    if (!here) { g += `<circle cx="${cx}" cy="${cy}" r="15" fill="none" stroke="var(--faint)" stroke-dasharray="3 4" opacity=".6"/><text x="${cx}" y="${cy + 4}" text-anchor="middle" fill="var(--faint)">${s[0].toUpperCase()}</text>`; return; }
+    g += `<circle class="reach" cx="${cx}" cy="${cy}" r="30" stroke="${k}"/>`;
+    if (on) g += `<circle class="pulse" cx="${cx}" cy="${cy}" r="16" stroke="var(--ours)" style="animation-delay:${(ORDER.indexOf(s) * .5)}s"/>`;
+    g += `<circle cx="${cx}" cy="${cy}" r="16" fill="${on ? "var(--ours)" : "var(--cell0)"}" stroke="${k}" stroke-width="1.6"/><text x="${cx}" y="${cy + 4}" text-anchor="middle" fill="${on ? "#fff" : "var(--muted)"}">${s[0].toUpperCase()}</text>`;
+    g += `<text x="${cx}" y="${cy + (s === "north" ? -24 : 32)}" text-anchor="middle" fill="var(--muted)" style="font-weight:500;font-size:10px">${MODEL[here] || here}${on ? "" : " · idle"}</text>`;
+  });
+  return g;
+}
+function viewer() {
+  const key = `${SV.t}-${SV.v}`, e = VERS[key], cm = CAMS[key];
+  document.getElementById("sv-t").innerHTML = TASKS.map(([id, nm]) => `<button type="button" data-t="${id}" aria-pressed="${id === SV.t}" style="--k:var(${id[0] === "C" ? "--con" : "--rea"})">${id}</button>`).join("");
+  document.getElementById("sv-v").innerHTML = VLIST.map(v => `<button type="button" data-v="${v}" aria-pressed="${v === SV.v}">${v}</button>`).join("");
+  document.querySelectorAll("#sv-t button").forEach(b => b.onclick = () => { SV.t = b.dataset.t; viewer(); });
+  document.querySelectorAll("#sv-v button").forEach(b => b.onclick = () => { SV.v = b.dataset.v; viewer(); });
+  document.getElementById("wc").innerHTML = workcell(e);
+  const vd = document.getElementById("sv-verdict"); vd.className = "verdict" + (e.feasible ? "" : " no"); vd.textContent = `${tname(SV.t)}, ${SV.v}: ${verdictText(e)}`;
+  const rooms = [["card look", 0]].concat(cm.rooms.map((r, i) => [r, cm.cams.length + i]));
+  document.getElementById("sv-rooms").innerHTML = rooms.map(([n, i]) => `<figure class="shot"><div class="cell" role="img" aria-label="${n}" style="${cell(key, i)}"></div><figcaption>${n}</figcaption></figure>`).join("");
+  document.getElementById("sv-cams").innerHTML = cm.cams.map((c, i) => `<figure class="shot"><div class="cell" role="img" aria-label="${CAMNAME[c]} camera" style="${cell(key, i)}"></div><figcaption>${CAMNAME[c]}</figcaption></figure>`).join("");
+}
+viewer();
+
+/* ---------- marquee: every version in its card look, then in its rooms ---------- */
+(() => {
+  const host = document.getElementById("marq"), ROOMS = ["kitchen", "workshop", "home"];
+  const item = (t, v, inner) => `<button type="button" class="mq" data-t="${t}" data-v="${v}" aria-label="${tname(t)}, ${v}">${inner}<i style="background:var(${t[0] === "C" ? "--con" : "--rea"})"></i><span>${t} · ${v}</span></button>`;
+  const still = (t, v) => item(t, v, `<img src="assets/img/${t}-${v}.jpg" alt="" loading="lazy">`);
+  const room = (t, v, r) => { const key = `${t}-${v}`, e = CAMS[key], i = e.cams.length + e.rooms.indexOf(r); return item(t, v, `<div class="cell" style="${cell(key, i)}"></div>`).replace(`${t} · ${v}</span>`, `${t} · ${v} · ${r}</span>`); };
+  const all = TASKS.flatMap(([t]) => VLIST.map(v => [t, v]));
+  const rows = [all.filter(([t]) => t[0] === "C").map(([t, v]) => still(t, v)), all.filter(([t]) => t[0] === "R").map(([t, v]) => still(t, v)),
+    all.map(([t, v], i) => room(t, v, ROOMS[i % 3]))];
+  host.innerHTML = rows.map((r, i) => `<div class="mrow${i % 2 ? " rev" : ""}"><div class="mtrack" style="--dur:${[80, 90, 150][i]}s">${r.join("")}${r.join("")}</div></div>`).join("");
+  host.querySelectorAll(".mq").forEach(b => {
+    const {t, v} = b.dataset;
+    if (!reduce && hasClip(v, t)) {
+      b.addEventListener("pointerenter", () => { if (b.querySelector("video")) return; const vd = document.createElement("video"); Object.assign(vd, {muted: true, loop: true, playsInline: true, src: `assets/video/${t}-${v}.mp4`}); b.prepend(vd); vd.play().catch(() => {}); });
+      b.addEventListener("pointerleave", () => { const vd = b.querySelector("video"); if (vd) vd.remove(); });
+    }
+    b.onclick = () => { const st = CARDS[t]; st.v = v; st.decoy = false; card(t); st.el.scrollIntoView({behavior: reduce ? "auto" : "smooth", block: "center"}); };
+  });
+  if (reduce) host.querySelectorAll(".mrow").forEach(r => r.style.overflowX = "auto");
+})();
+
+/* ---------- charts ---------- */
+const NS = "http://www.w3.org/2000/svg";
+const el = (n, a, txt) => { const x = document.createElementNS(NS, n); for (const k in a) x.setAttribute(k, a[k]); if (txt != null) x.textContent = txt; return x; };
+const mv = (g, x, y) => { g.style.transform = `translate(${x}px, ${y}px)`; };
+const SHAPE = {"LLM + solver": "circle", "SMART-LLM-style": "square", "RoCo-style": "tri", "HMAS-2-style": "diamond"};
+function shape(kind, r, ours) {
+  const st = ours ? {fill: "var(--ours)", class: "om"} : {fill: "var(--cell0)", stroke: "var(--faint)", "stroke-width": 1.6};
+  if (ours || kind === "circle") return el("circle", {cx: 0, cy: 0, r: ours ? r + 2.5 : r, ...st});
+  if (kind === "square") return el("rect", {x: -r, y: -r, width: 2 * r, height: 2 * r, ...st});
+  if (kind === "tri") return el("path", {d: `M0 ${-r - 1}L${r + 1} ${r}L${-r - 1} ${r}Z`, ...st});
+  return el("path", {d: `M0 ${-r - 1.5}L${r + 1.5} 0L0 ${r + 1.5}L${-r - 1.5} 0Z`, ...st});
+}
+const best4 = (k, bb = BB) => Math.max(...OTHERS.map(m => R[bb][m][k]));
+const bestName = (k, bb = BB) => OTHERS.reduce((a, m) => R[bb][m][k] > R[bb][a][k] ? m : a, OTHERS[0]);
+
+/* 5.2.1: dot plot, marks glide between backbones */
+const Q1 = {cats: ["exact","surplus","shortfall","swapped","borrow","all","task"], built: false};
+function q1() {
+  const s = document.getElementById("c-q1"), L = 42, Rt = 630, T = 22, B = 262, y = v => B - v / 100 * (B - T), step = (Rt - L) / Q1.cats.length, lab = {all: "All", task: "Task"};
+  if (!Q1.built) {
+    const band = el("rect", {x: L + step * 5 + 4, y: T - 12, width: step * 2 - 8, height: B - T + 12, rx: 12}); band.style.fill = "color-mix(in srgb, var(--ours) 8%, transparent)";
+    const ax = el("g", {class: "ax"}), gr = el("g", {class: "grid"});
+    [0, 25, 50, 75, 100].forEach(v => { gr.appendChild(el("line", {x1: L, x2: Rt, y1: y(v), y2: y(v)})); ax.appendChild(el("text", {x: L - 8, y: y(v) + 4, "text-anchor": "end"}, v)); });
+    Q1.cats.forEach((c, i) => ax.appendChild(el("text", {x: L + step * (i + .5), y: B + 20, "text-anchor": "middle"}, lab[c] || c)));
+    s.append(band, gr, ax); Q1.g = {};
+    Q1.cats.forEach(c => {
+      METHODS.forEach(m => { const g = el("g", {class: "mv", style: "cursor: default"}); g.appendChild(shape(SHAPE[m], 4.2, m === "Ours v2")); s.appendChild(g); Q1.g[c + "|" + m] = g;
+        bindTip(g, () => `<b>${NAME(m)}</b><br>${lab[c] || c}: ${f1(R[BB][m][c])}%<br>${BB}`); });
+      const d = el("g", {class: "mv"}); d.appendChild(el("text", {class: "lab ours", x: 0, y: 0, "text-anchor": "middle"})); s.appendChild(d); Q1.g[c + "|v"] = d;
+    });
+    document.getElementById("lg-q1").innerHTML = `<span style="color:var(--ours)">● MRScissors</span>` + OTHERS.map(m => `<span>${{circle: "○", square: "□", tri: "△", diamond: "◇"}[SHAPE[m]]} ${m}</span>`).join("");
+    Q1.built = true;
+  }
+  Q1.cats.forEach((c, i) => {
+    const cx = L + step * (i + .5), ours = R[BB]["Ours v2"][c];
+    OTHERS.forEach((m, j) => mv(Q1.g[c + "|" + m], cx - 22 + j * 9, y(R[BB][m][c])));
+    mv(Q1.g[c + "|Ours v2"], cx + 18, y(ours)); mv(Q1.g[c + "|v"], cx + 18, y(ours) - 12); Q1.g[c + "|v"].firstChild.textContent = f1(ours);
+  });
+  const o = R[BB]["Ours v2"];
+  document.getElementById("q1-short").textContent = `With ${BB}, MRScissors is right in ${f1(o.all)}% of all 480 scenes; the next method, ${bestName("all")}, in ${f1(best4("all"))}%.`;
+  const K = [["all", "team-selection accuracy (%)"], ["task", "task-level accuracy (%)"], ["msssr", "MSS-SR (%), feasible scenes"]], host = document.getElementById("kpis");
+  if (!host.children.length) host.innerHTML = K.map(([k, l]) => `<div class="kpi"><b class="grad" data-k="${k}">0.0</b><span>${l}</span><em data-e="${k}"></em></div>`).join("");
+  K.forEach(([k]) => { const b = host.querySelector(`[data-k="${k}"]`), go = () => countUp(b, o[k], 1); host.dataset.seen ? go() : whenSeen(host, () => { host.dataset.seen = 1; go(); }, .5);
+    host.querySelector(`[data-e="${k}"]`).textContent = `next best ${f1(best4(k))}`; });
+}
+
+/* 5.2.2: waffles of the 96 task-scenes */
+const T8 = TASKS.map(t => t[0]);
+const WB = {built: false, seen: reduce};
+function waffles() {
+  const host = document.getElementById("waffles"), cs = 11, gap = 2;
+  if (!WB.built) {
+    [...METHODS].reverse().forEach(m => {
+      const d = document.createElement("div"); d.className = "waffle" + (m === "Ours v2" ? " ours" : "");
+      const s = el("svg", {viewBox: `0 0 ${12 * (cs + gap)} ${8 * (cs + gap) + 6}`, "aria-label": `${NAME(m)}: task-scenes with all five configurations right`});
+      WB[m] = [];
+      for (let i = 0; i < 96; i++) { const row = Math.floor(i / 12), col = i % 12, r = el("rect", {x: col * (cs + gap), y: row * (cs + gap) + (row >= 4 ? 6 : 0), width: cs, height: cs, rx: 2.5, class: "sq", fill: "var(--line)"});
+        r.style.transitionDelay = reduce ? "0s" : (i * 8) + "ms"; s.appendChild(r); WB[m].push(r);
+        bindTip(r, () => `<b>${NAME(m)}</b><br>${T8[row]} · ${col < 6 ? "easy" : "hard"} · seed ${col % 6}<br>${R[BB][m].tl[i] === "1" ? "all five right" : "not all five"}`); }
+      d.innerHTML = `<div class="w-n"></div>`; d.appendChild(s); d.insertAdjacentHTML("beforeend", `<div class="w-l">${NAME(m)}</div>`); host.appendChild(d); WB[m + "n"] = d.querySelector(".w-n");
+    });
+    WB.built = true;
+    whenSeen(host, () => { WB.seen = true; waffles(); }, .3);
+  }
+  METHODS.forEach(m => { const tl = R[BB][m].tl; WB[m].forEach((r, i) => r.style.fill = WB.seen && tl[i] === "1" ? (m === "Ours v2" ? "var(--ours)" : "var(--faint)") : "var(--line)");
+    WB[m + "n"].textContent = f1(R[BB][m].task) + "%"; });
+  const o = R[BB]["Ours v2"], cnt = m => R[BB][m].tl.split("1").length - 1;
+  document.getElementById("q4-short").textContent = `MRScissors gets all five configurations right in ${cnt("Ours v2")} of the 96 task-scenes (${f1(o.task)}%); the other methods in ${Math.min(...OTHERS.map(cnt))} to ${Math.max(...OTHERS.map(cnt))}.`;
+}
+
+/* 5.2.3: task x configuration heatmap */
+let HM = "Ours v2";
+function hmChips() {
+  const host = document.getElementById("hm-chips");
+  host.innerHTML = [...METHODS].reverse().map(m => `<button type="button" data-hm="${m}" aria-pressed="${HM === m}">${SHORT[m]}</button>`).join("");
+  host.querySelectorAll("button").forEach(b => b.onclick = () => { HM = b.dataset.hm; hmChips(); heat(); });
+}
+const HMB = {built: false};
+function heat() {
+  const s = document.getElementById("c-hm"), L = 182, T = 30, cw = (636 - L) / 5, ch = 34;
+  if (!HMB.built) {
+    VLIST.forEach((v, j) => s.appendChild(el("text", {class: "rl", x: L + cw * (j + .5), y: T - 10, "text-anchor": "middle"}, v)));
+    T8.forEach((t, i) => {
+      const yy = T + ch * i + (i >= 4 ? 8 : 0);
+      s.appendChild(el("rect", {x: L - 180, y: yy + 9, width: 4, height: ch - 18, rx: 2, fill: t[0] === "C" ? "var(--con)" : "var(--rea)"}));
+      s.appendChild(el("text", {class: "rl", x: L - 170, y: yy + ch / 2 + 4}, `${t} ${TASKS[i][1]}`));
+      VLIST.forEach((v, j) => {
+        const g = el("g", {}), r = el("rect", {x: L + cw * j + 2, y: yy + 2, width: cw - 4, height: ch - 4, rx: 6, class: "sq"}), tx = el("text", {x: L + cw * j + cw / 2, y: yy + ch / 2 + 4, "text-anchor": "middle"});
+        g.append(r, tx); s.appendChild(g); HMB[t + "-" + v] = [r, tx];
+        bindTip(g, () => `<b>${t} ${v}</b><br>${NAME(HM)}: ${R[BB][HM].cell[t + "-" + v]}/12 right<br>${BB}`);
+      });
+    });
+    const j = VLIST.indexOf("swapped"); s.appendChild(el("rect", {class: "hl", x: L + cw * j - 1, y: T - 3, width: cw + 2, height: ch * 8 + 14, rx: 9}));
+    HMB.built = true;
+  }
+  T8.forEach(t => VLIST.forEach(v => {
+    const [r, tx] = HMB[t + "-" + v], c = R[BB][HM].cell[t + "-" + v], p = c / 12, hue = t[0] === "C" ? "var(--con)" : "var(--rea)";
+    r.style.fill = `color-mix(in oklab, ${hue} ${Math.round(6 + 88 * p * p)}%, var(--cell0))`;
+    tx.textContent = c; tx.style.fill = p > .7 ? "#fff" : "var(--ink)";
+  }));
+  const o = R[BB]["Ours v2"].swapped, ot = OTHERS.map(m => R[BB][m].swapped);
+  document.getElementById("hm-short").textContent = `With ${BB}, MRScissors is right in ${f1(o)}% of the swapped scenes, the other methods in ${f1(Math.min(...ot))} to ${f1(Math.max(...ot))}%.`;
+}
+
+/* 5.2.4: shortfall, Qwen -> Claude */
+function slope() {
+  const s = document.getElementById("c-sl"), x1 = 190, x2 = 450, T = 30, B = 240, lo = 40, y = v => B - (v - lo) / (100 - lo) * (B - T);
+  const QW = "Qwen3.8-Max", CL = "Claude Sonnet 5.5";
+  const ax = el("g", {class: "ax"}), gr = el("g", {class: "grid"});
+  [40, 60, 80, 100].forEach(v => { gr.appendChild(el("line", {x1: x1, x2: x2, y1: y(v), y2: y(v)})); ax.appendChild(el("text", {x: (x1 + x2) / 2, y: y(v) - 4, "text-anchor": "middle", style: "font-size:9.5px;opacity:.7"}, v + "%")); });
+  ax.appendChild(el("text", {x: x1, y: T - 12, "text-anchor": "middle"}, QW)); ax.appendChild(el("text", {x: x2, y: T - 12, "text-anchor": "middle"}, CL));
+  [x1, x2].forEach(x => gr.appendChild(el("line", {x1: x, x2: x, y1: T - 4, y2: B})));
+  s.append(gr, ax);
+  /* labels: spread so they do not overlap */
+  const spread = (side) => { const a = METHODS.map(m => ({m, v: R[side][m].shortfall, y: y(R[side][m].shortfall)})).sort((p, q) => p.y - q.y);
+    for (let i = 1; i < a.length; i++) if (a[i].y - a[i - 1].y < 15) a[i].y = a[i - 1].y + 15; const o = {}; a.forEach(p => o[p.m] = p.y); return o; };
+  const ly1 = spread(QW), ly2 = spread(CL);
+  METHODS.forEach(m => {
+    const ours = m === "Ours v2", a = R[QW][m].shortfall, b = R[CL][m].shortfall, col = ours ? "var(--ours)" : "var(--faint)";
+    const len = Math.hypot(x2 - x1, y(b) - y(a)) + 2, p = el("path", {d: `M${x1} ${y(a)}L${x2} ${y(b)}`, stroke: col, "stroke-width": ours ? 3.4 : 1.8, class: "draw" + (ours ? " om" : "")});
+    p.style.setProperty("--len", len); s.appendChild(p);
+    [[x1, a, QW], [x2, b, CL]].forEach(([x, v, bb]) => { const c = el("circle", {cx: x, cy: y(v), r: ours ? 5.5 : 4, fill: ours ? "var(--ours)" : "var(--cell0)", stroke: col, "stroke-width": 1.8}); s.appendChild(c);
+      bindTip(c, `<b>${NAME(m)}</b> · ${bb}<br>shortfall: ${f1(v)}% right (infeasible)`); });
+    s.appendChild(el("text", {class: "lab" + (ours ? " ours" : ""), x: x1 - 12, y: ly1[m] + 4, "text-anchor": "end"}, `${SHORT[m]} ${f1(a)}`));
+    s.appendChild(el("text", {class: "lab" + (ours ? " ours" : ""), x: x2 + 12, y: ly2[m] + 4}, `${f1(b)} ${SHORT[m]}`));
+  });
+  const box = document.getElementById("sl-box"); reduce ? box.classList.add("drawn") : whenSeen(box, () => box.classList.add("drawn"), .4);
+  const gains = OTHERS.map(m => R[CL][m].shortfall - R[QW][m].shortfall);
+  document.getElementById("sl-short").textContent = `With Claude Sonnet 5.5 every method gives the infeasible answer in at least ${f1(Math.min(...METHODS.map(m => R[CL][m].shortfall)))}% of shortfall scenes; the other methods gain ${f1(Math.min(...gains))} to ${f1(Math.max(...gains))} points, and MRScissors leads on both (${f1(R[QW]["Ours v2"].shortfall)}% and ${f1(R[CL]["Ours v2"].shortfall)}%).`;
+}
+
+/* 5.2.5: cost */
+function q6() {
+  const s = document.getElementById("c-q6"); s.innerHTML = "";
+  const L = 46, Rt = 620, T = 14, B = 238, x = v => L + (v - 200) / 1000 * (Rt - L), y = v => B - (v - 55) / 40 * (B - T), rad = n => 4 + 3.4 * Math.sqrt(n);
+  const ax = el("g", {class: "ax"}), gr = el("g", {class: "grid"});
+  [60, 70, 80, 90].forEach(v => { gr.appendChild(el("line", {x1: L, x2: Rt, y1: y(v), y2: y(v)})); ax.appendChild(el("text", {x: L - 8, y: y(v) + 4, "text-anchor": "end"}, v)); });
+  [300, 600, 900, 1200].forEach(v => { gr.appendChild(el("line", {x1: x(v), x2: x(v), y1: T, y2: B})); ax.appendChild(el("text", {x: x(v), y: B + 18, "text-anchor": "middle"}, v + "k")); });
+  ax.appendChild(el("text", {x: Rt, y: B + 36, "text-anchor": "end"}, "tokens per episode"));
+  ax.appendChild(el("text", {x: L - 36, y: T - 2}, "acc. %"));
+  s.append(gr, ax);
+  METHODS.forEach(m => {
+    const a = R["Qwen3.8-Max"][m], b = R["Claude Sonnet 5.5"][m], ours = m === "Ours v2", col = ours ? "var(--ours)" : "var(--faint)", q = BB === "Qwen3.8-Max";
+    s.appendChild(el("line", {x1: x(a.ktok), y1: y(a.all), x2: x(b.ktok), y2: y(b.all), stroke: col, "stroke-width": ours ? 2 : 1.3, "stroke-dasharray": ours ? "" : "3 3"}));
+    const ca = el("circle", {cx: x(a.ktok), cy: y(a.all), r: rad(a.sess), fill: col, "fill-opacity": q ? .85 : .22, stroke: col, class: ours ? "om" : ""});
+    const cb = el("circle", {cx: x(b.ktok), cy: y(b.all), r: rad(b.sess), fill: col, "fill-opacity": q ? .06 : .16, stroke: col, "stroke-width": 2, "stroke-opacity": q ? .45 : 1, class: ours ? "om" : ""});
+    s.append(ca, cb);
+    [[ca, a, "Qwen3.8-Max"], [cb, b, "Claude Sonnet 5.5"]].forEach(([c, r, bb]) => bindTip(c, `<b>${NAME(m)}</b> · ${bb}<br>${f1(r.all)}% right · ${r.ktok}k tokens · ${f1(r.sess)} sessions`));
+    const on = q ? a : b, right = x(on.ktok) > Rt - 120;
+    s.appendChild(el("text", {class: "lab" + (ours ? " ours" : ""), x: x(on.ktok) + (right ? -rad(on.sess) - 6 : rad(on.sess) + 6), y: y(on.all) + (right ? -rad(on.sess) - 4 : 4), "text-anchor": right ? "end" : "start"}, NAME(m)));
+  });
+  const o = R[BB]["Ours v2"], adapted = OTHERS.slice(1).map(m => R[BB][m].ktok);
+  document.getElementById("q6-short").textContent = `With ${BB}, MRScissors uses ${o.ktok}k tokens and ${f1(o.sess)} sessions an episode; the adapted methods use ${Math.min(...adapted)}k to ${Math.max(...adapted)}k tokens.`;
+}
+
+/* 5.3: right team -> task done */
+const DB = {built: false};
+function q5() {
+  const s = document.getElementById("c-q5"), L = 150, Rt = 610, T = 16, rh = 42, x = v => L + v / 100 * (Rt - L);
+  if (!DB.built) {
+    const ax = el("g", {class: "ax"}), gr = el("g", {class: "grid"});
+    [0, 25, 50, 75, 100].forEach(v => { gr.appendChild(el("line", {x1: x(v), x2: x(v), y1: T, y2: T + rh * 5})); ax.appendChild(el("text", {x: x(v), y: T + rh * 5 + 18, "text-anchor": "middle"}, v)); });
+    s.append(gr, ax);
+    [...METHODS].reverse().forEach((m, i) => {
+      const cy = T + rh * i + rh / 2, ours = m === "Ours v2", col = ours ? "var(--ours)" : "var(--faint)";
+      s.appendChild(el("text", {class: "lab" + (ours ? " ours" : ""), x: L - 14, y: cy + 4, "text-anchor": "end"}, NAME(m)));
+      const bar = el("rect", {y: cy - (ours ? 2 : 1), height: ours ? 4 : 2, rx: 2, fill: col, class: "mv"});
+      const a = el("g", {class: "mv"}); a.append(el("circle", {r: 6.5, fill: col, class: ours ? "om" : ""}), el("text", {class: "lab" + (ours ? " ours" : ""), x: 12, y: 4}));
+      const b = el("g", {class: "mv"}); b.append(el("circle", {r: 6.5, fill: "var(--cell0)", stroke: col, "stroke-width": 2}), el("text", {class: "lab" + (ours ? " ours" : ""), x: -12, y: 4, "text-anchor": "end"}));
+      s.append(bar, a, b); DB[m] = {bar, a, b, cy};
+      bindTip(a, () => `<b>${NAME(m)}</b><br>right team: ${f1(R[BB][m].team)}% of feasible scenes`);
+      bindTip(b, () => `<b>${NAME(m)}</b><br>right team and task done: ${f1(R[BB][m].msssr)}%<br>success when the team is right: ${f1(R[BB][m].sr_right)}%`);
+    });
+    DB.built = true;
+  }
+  METHODS.forEach(m => { const r = R[BB][m], d = DB[m];
+    d.bar.setAttribute("x", x(r.msssr)); d.bar.setAttribute("width", x(r.team) - x(r.msssr));
+    mv(d.a, x(r.team), d.cy); mv(d.b, x(r.msssr), d.cy); d.a.lastChild.textContent = f1(r.team); d.b.lastChild.textContent = f1(r.msssr); });
+  const o = R[BB]["Ours v2"], others = OTHERS.map(m => R[BB][m].msssr);
+  document.getElementById("q5-short").textContent = `With ${BB}, MRScissors succeeds with a right team (MSS-SR) in ${f1(o.msssr)}% of the 312 feasible scenes, the other methods in ${f1(Math.min(...others))} to ${f1(Math.max(...others))}%.`;
+}
+/* leaderboard: sortable, rows glide to their new rank */
+const LBC = [["all","All"],["task","Task"],["exact","exact"],["surplus","surplus"],["shortfall","shortfall"],["swapped","swapped"],["borrow","borrow"],["msssr","MSS-SR"],["ktok","k tokens"]];
+const LBNOTE = {"LLM + solver": "translation + exact search", "SMART-LLM-style": "fixed pipeline", "RoCo-style": "per-arm dialogue", "HMAS-2-style": "central proposal, arm vetoes", "Ours v2": "blind prover, measured table, exact search"};
+let LBK = "all";
+function table() {
+  const t = document.getElementById("lb"), asc = LBK === "ktok";
+  const rows = [...METHODS].sort((a, b) => asc ? R[BB][a][LBK] - R[BB][b][LBK] : R[BB][b][LBK] - R[BB][a][LBK]);
+  const before = {}; t.querySelectorAll("tbody tr").forEach(r => before[r.dataset.m] = r.getBoundingClientRect().top);
+  const max = Math.max(...METHODS.map(m => R[BB][m][LBK]));
+  t.innerHTML = `<thead><tr><th>#</th><th>Method · ${BB}</th>${LBC.map(([k, l]) => `<th><button type="button" class="${k === "ktok" ? "asc" : ""}" data-k="${k}" aria-pressed="${k === LBK}">${l}</button></th>`).join("")}</tr></thead><tbody>` +
+    rows.map((m, r) => `<tr data-m="${m}" class="${m === "Ours v2" ? "ours" : ""} ${r === 0 ? "top" : ""}"><td class="rk"><b>${r + 1}</b></td><td class="nm">${NAME(m)}${m === "Ours v2" ? '<span class="chip">ours</span>' : ""}<small>${LBNOTE[m]}</small></td>` +
+      LBC.map(([k]) => `<td class="${k === LBK ? "on" : ""}">${k === "ktok" ? R[BB][m][k] : f1(R[BB][m][k])}${k === LBK ? `<span class="lbbar"><i style="width:${(R[BB][m][k] / max * 100).toFixed(1)}%"></i></span>` : ""}</td>`).join("") + `</tr>`).join("") + `</tbody>`;
+  t.querySelectorAll("th button").forEach(b => b.onclick = () => { LBK = b.dataset.k; table(); });
+  if (reduce) return;
+  t.querySelectorAll("tbody tr").forEach(r => { const b = before[r.dataset.m]; if (b == null) return; const d = b - r.getBoundingClientRect().top; if (!d) return;
+    r.style.transform = `translateY(${d}px)`; r.style.transition = "none"; requestAnimationFrame(() => { r.style.transition = "transform .7s cubic-bezier(.16, 1, .3, 1)"; r.style.transform = ""; }); });
+}
+function charts() { q1(); waffles(); heat(); q6(); q5(); table(); }
+document.querySelectorAll("[data-bb]").forEach(b => b.addEventListener("click", () => {
+  BB = b.dataset.bb; document.querySelectorAll("[data-bb]").forEach(x => x.setAttribute("aria-pressed", x === b)); charts(); }));
+hmChips(); charts(); slope();
+
+document.getElementById("copybib").addEventListener("click", () => {
+  const txt = document.getElementById("bib").textContent, msg = document.getElementById("copied");
+  const sel = () => { const r = document.createRange(); r.selectNodeContents(document.getElementById("bib")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); msg.textContent = "Selected. Press Ctrl+C or ⌘C."; };
+  try { navigator.clipboard.writeText(txt).then(() => { msg.textContent = "Copied."; }, sel); } catch (e) { sel(); }
+});
+</script>
+
+</body>
+</html>
