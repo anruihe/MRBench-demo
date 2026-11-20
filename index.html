@@ -324,6 +324,8 @@ details.why p { margin-top: 6px; line-height: 1.5 }
 .shot:hover .cell { transform: scale(1.06) }
 .shot figcaption { position: absolute; left: 6px; bottom: 6px; margin: 0; font: 600 9.5px/1 var(--mono); color: #fff; background: rgba(6, 9, 19, .62); padding: 4px 6px; border-radius: 4px }
 .shots .k { font: 500 11px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); margin-top: 4px }
+.gt { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px }
+.gt .kpi b { color: var(--con) } .gt .kpi:nth-child(2) b { color: var(--rea) }
 .rules { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 26px }
 .rule { padding: 18px; min-width: 0 }
 .rule .no { font: 600 11px/1 var(--mono); color: var(--ours); letter-spacing: .1em }
@@ -673,7 +675,7 @@ section { padding-block: 84px 8px }
       <div class="kicker rv"><b>§ 3.2</b>MRBench</div>
       <h2 class="rv">Task design</h2>
       <p class="lede rv">Eight tasks in five configurations give 40 versions and 480 scenes. The instruction gives only the goal: no arm, role, step or tool.</p>
-      <div class="marq rv" id="marq" aria-label="Every version, in its card look and its rooms"></div>
+      <div class="marq rv" id="marq" aria-label="Every version of every task"></div>
       <p class="note">Hover a scene to play its reference where a clip exists; click it to open that task below.</p>
 
       <div class="sub rv"><span class="n">3.2.1</span><h3>Concurrency and Reach</h3></div>
@@ -706,42 +708,43 @@ section { padding-block: 84px 8px }
     <div class="wrap">
       <div class="kicker rv"><b>§ 3.3</b>MRBench</div>
       <h2 class="rv">Benchmark construction</h2>
+      <p class="lede rv">How a scene is built, and how its right answer is known: the same for every task and configuration.</p>
+
+      <div class="sub rv"><span class="n">3.3.1</span><h3>Workcell and scenes</h3></div>
       <div class="split">
         <div class="rv">
-          <div class="sub" style="margin-top:0"><span class="n">3.3.1</span><h3>Workcell and scenes</h3></div>
-          <div class="prose" style="margin-top:14px">
+          <div class="prose">
             <p>One table has three fixed places, <b>west</b> and <b>east</b> 1.4 m apart with <b>south</b> between, and a fourth, <b>north</b>, for the surplus arm; each takes a Franka, a PiPER or an SO-101. We simulate in Isaac Sim 4.5 with Isaac Lab 2.1.</p>
             <p>Each version has 12 scenes (two levels, six seeds): the seed picks the room, recolors the task's objects and adds three everyday items.</p>
           </div>
+          <div class="wc" style="margin-top:20px">
+            <div class="k">The workcell, from above</div>
+            <svg id="wc" viewBox="0 0 340 236" style="margin-top:6px" aria-label="The table with its four places: west, south and east fixed, north for the surplus arm"></svg>
+            <div class="k" style="text-transform:none;letter-spacing:0;margin-top:4px">Each place takes a Franka, a PiPER or an SO-101.</div>
+          </div>
         </div>
         <div class="rv d1">
-          <div class="sub" style="margin-top:0"><span class="n">3.3.2</span><h3>Ground truth is computed</h3></div>
-          <div class="prose" style="margin-top:14px">
-            <p>The gold answer of a scene comes from IK with margins and an exact search for the smallest feasible teams.</p>
-            <p>In Isaac Sim the scripted references succeed in <b>all 312 feasible scenes</b>, and the distractors fail as designed in <b>all 96 borrow scenes</b>.</p>
-          </div>
+          <div class="vbar"><div class="k" style="font: 500 11px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint)">One scene, four looks</div><div class="tpills" id="sv-t" role="group" aria-label="Task"></div></div>
+          <div class="rooms" id="sv-rooms" style="grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 12px"></div>
         </div>
       </div>
-      <div class="viewer glass rv">
-        <div class="vbar">
-          <div class="tpills" id="sv-t" role="group" aria-label="Task"></div>
-          <div class="vchips" id="sv-v" role="group" aria-label="Configuration"></div>
+      <div class="shots rv" style="margin-top:22px">
+        <div class="k">What a method sees: every camera of the scene</div>
+        <div class="cams" id="sv-cams"></div>
+      </div>
+      <p class="note">Looks: the card look used for the figures, then the rooms of seeds 0, 1 and 2 (exact, easy level). Cameras: card look, easy level, seed 0; a wrist camera for every arm on the table.</p>
+
+      <div class="sub rv"><span class="n">3.3.2</span><h3>Ground truth is computed</h3></div>
+      <div class="split" style="align-items:center">
+        <div class="prose rv">
+          <p>The gold answer of a scene comes from IK with margins and an exact search for the smallest feasible teams, not from a person's judgment.</p>
+          <p>Every gold answer is then checked in Isaac Sim.</p>
         </div>
-        <div class="vgrid">
-          <div class="wc">
-            <div class="k">Workcell, from above</div>
-            <svg id="wc" viewBox="0 0 340 236" aria-label="The table and the arms of this configuration"></svg>
-            <div class="verdict" id="sv-verdict" style="font-size:16px;margin-top:6px"></div>
-          </div>
-          <div class="shots">
-            <div class="k">The same scene in four looks</div>
-            <div class="rooms" id="sv-rooms"></div>
-            <div class="k">What a method sees: every camera</div>
-            <div class="cams" id="sv-cams"></div>
-          </div>
+        <div class="gt rv d1">
+          <div class="kpi"><b>312 / 312</b><span>feasible scenes in which the scripted reference succeeds</span></div>
+          <div class="kpi"><b>96 / 96</b><span>borrow scenes in which the distractor fails as designed</span></div>
         </div>
       </div>
-      <p class="note">Cameras: card look, easy level, seed 0. Rooms: the main camera at seeds 0 to 2. Workcell drawn to scale for the places; the dashed circles mark the arms, not their reach.</p>
 
       <div class="sub rv"><span class="n">3.4</span><h3>Protocol and metrics</h3></div>
       <p class="lede rv" style="margin-top:10px">The protocol removes four conveniences that multi-robot benchmarks offer and real workcells do not.</p>
@@ -1082,38 +1085,33 @@ document.querySelectorAll("[data-lvl]").forEach(b => b.addEventListener("click",
   LVL = b.dataset.lvl; document.querySelectorAll("[data-lvl]").forEach(x => x.setAttribute("aria-pressed", x === b)); Object.keys(CARDS).forEach(card); }));
 
 /* ---------- scene viewer: workcell, rooms and cameras ---------- */
-const SV = {t: "Rea-02", v: "swapped"};
 function cell(key, i) {
   const e = CAMS[key], c = i % e.cols, r = Math.floor(i / e.cols);
   return `background-image:url(assets/cam/${key}.jpg);background-size:${e.cols * 100}% ${e.rows * 100}%;background-position:${e.cols > 1 ? c / (e.cols - 1) * 100 : 0}% ${e.rows > 1 ? r / (e.rows - 1) * 100 : 0}%`;
 }
-function workcell(e) {
-  /* to scale: 100 px per metre, table 3.2 x 1.8 m drawn 2.8 x 1.8 for the column; places from the repository */
-  const X = x => 170 + x * 100, Y = y => 120 - y * 100, POS = {west: [-.7, 0], south: [0, -.7], east: [.7, 0], north: [0, .7]}, team = teamOf(e);
-  let g = `<rect class="tbl" x="30" y="30" width="280" height="180" rx="14"/>`;
-  g += `<line class="dim" x1="${X(-.7)}" x2="${X(.7)}" y1="16" y2="16"/><line class="dim" x1="${X(-.7)}" x2="${X(-.7)}" y1="11" y2="21"/><line class="dim" x1="${X(.7)}" x2="${X(.7)}" y1="11" y2="21"/><text class="dimt" x="${X(-.35)}" y="12" text-anchor="middle">1.4 m</text>`;
-  ORDER.forEach(s => {
-    const [x, y] = POS[s], here = e.slots[s], cx = X(x), cy = Y(y), on = team.has(s), k = on ? "var(--ours)" : "var(--faint)";
-    if (!here) { g += `<circle cx="${cx}" cy="${cy}" r="15" fill="none" stroke="var(--faint)" stroke-dasharray="3 4" opacity=".6"/><text x="${cx}" y="${cy + 4}" text-anchor="middle" fill="var(--faint)">${s[0].toUpperCase()}</text>`; return; }
-    g += `<circle class="reach" cx="${cx}" cy="${cy}" r="30" stroke="${k}"/>`;
-    if (on) g += `<circle class="pulse" cx="${cx}" cy="${cy}" r="16" stroke="var(--ours)" style="animation-delay:${(ORDER.indexOf(s) * .5)}s"/>`;
-    g += `<circle cx="${cx}" cy="${cy}" r="16" fill="${on ? "var(--ours)" : "var(--cell0)"}" stroke="${k}" stroke-width="1.6"/><text x="${cx}" y="${cy + 4}" text-anchor="middle" fill="${on ? "#fff" : "var(--muted)"}">${s[0].toUpperCase()}</text>`;
-    g += `<text x="${cx}" y="${cy + (s === "north" ? -24 : 32)}" text-anchor="middle" fill="var(--muted)" style="font-weight:500;font-size:10px">${MODEL[here] || here}${on ? "" : " · idle"}</text>`;
+function workcell() {
+  /* places to scale (100 px per metre) from the repository; the table drawn 2.8 x 1.8 m for the column */
+  const X = x => 170 + x * 100, Y = y => 120 - y * 100, P = [["west", -.7, 0, "W"], ["south", 0, -.7, "S"], ["east", .7, 0, "E"], ["north", 0, .7, "N"]];
+  let g = `<rect class="tbl" x="30" y="30" width="280" height="180" rx="4"/>`;
+  g += `<line class="dim" x1="${X(-.7) + 20}" x2="${X(.7) - 20}" y1="120" y2="120" stroke-dasharray="2 3"/><text class="dimt" x="170" y="114" text-anchor="middle">1.4 m</text>`;
+  P.forEach(([n, x, y, l], i) => {
+    const cx = X(x), cy = Y(y), sur = n === "north", k = sur ? "var(--faint)" : ["var(--con)", "var(--yellow)", "var(--rea)"][i];
+    if (!sur) g += `<circle class="pulse" cx="${cx}" cy="${cy}" r="16" stroke="${k}" style="animation-delay:${i * .5}s"/>`;
+    g += `<circle cx="${cx}" cy="${cy}" r="16" fill="${sur ? "var(--cell0)" : k}" stroke="${sur ? "var(--faint)" : "var(--ink)"}" stroke-width="1.2" ${sur ? 'stroke-dasharray="3 3"' : ""}/><text x="${cx}" y="${cy + 4}" text-anchor="middle" fill="${sur ? "var(--muted)" : n === "south" ? "var(--ink)" : "#fff"}">${l}</text>`;
+    g += `<text x="${cx}" y="${cy + (n === "north" ? -24 : 32)}" text-anchor="middle" fill="var(--muted)" style="font-weight:500;font-size:10px">${n}${sur ? " · surplus only" : ""}</text>`;
   });
   return g;
 }
+const SV = {t: "Rea-02"};
 function viewer() {
-  const key = `${SV.t}-${SV.v}`, e = VERS[key], cm = CAMS[key];
-  document.getElementById("sv-t").innerHTML = TASKS.map(([id, nm]) => `<button type="button" data-t="${id}" aria-pressed="${id === SV.t}" style="--k:var(${id[0] === "C" ? "--con" : "--rea"})">${id}</button>`).join("");
-  document.getElementById("sv-v").innerHTML = VLIST.map(v => `<button type="button" data-v="${v}" aria-pressed="${v === SV.v}">${v}</button>`).join("");
+  const key = `${SV.t}-exact`, cm = CAMS[key];
+  document.getElementById("sv-t").innerHTML = TASKS.map(([id]) => `<button type="button" data-t="${id}" aria-pressed="${id === SV.t}" style="--k:var(${id[0] === "C" ? "--con" : "--rea"})">${id}</button>`).join("");
   document.querySelectorAll("#sv-t button").forEach(b => b.onclick = () => { SV.t = b.dataset.t; viewer(); });
-  document.querySelectorAll("#sv-v button").forEach(b => b.onclick = () => { SV.v = b.dataset.v; viewer(); });
-  document.getElementById("wc").innerHTML = workcell(e);
-  const vd = document.getElementById("sv-verdict"); vd.className = "verdict" + (e.feasible ? "" : " no"); vd.textContent = `${tname(SV.t)}, ${SV.v}: ${verdictText(e)}`;
-  const rooms = [["card look", 0]].concat(cm.rooms.map((r, i) => [r, cm.cams.length + i]));
-  document.getElementById("sv-rooms").innerHTML = rooms.map(([n, i]) => `<figure class="shot"><div class="cell" role="img" aria-label="${n}" style="${cell(key, i)}"></div><figcaption>${n}</figcaption></figure>`).join("");
+  const rooms = [["card look", 0]].concat(cm.rooms.map((r, i) => [`${r} · seed ${i}`, cm.cams.length + i]));
+  document.getElementById("sv-rooms").innerHTML = rooms.map(([n, i]) => `<figure class="shot"><div class="cell" role="img" aria-label="${tname(SV.t)}, ${n}" style="${cell(key, i)}"></div><figcaption>${n}</figcaption></figure>`).join("");
   document.getElementById("sv-cams").innerHTML = cm.cams.map((c, i) => `<figure class="shot"><div class="cell" role="img" aria-label="${CAMNAME[c]} camera" style="${cell(key, i)}"></div><figcaption>${CAMNAME[c]}</figcaption></figure>`).join("");
 }
+document.getElementById("wc").innerHTML = workcell();
 viewer();
 
 /* ---------- marquee: every version in its card look, then in its rooms ---------- */
@@ -1123,8 +1121,7 @@ viewer();
   const still = (t, v) => item(t, v, `<img src="assets/img/${t}-${v}.jpg" alt="" loading="lazy">`);
   const room = (t, v, r) => { const key = `${t}-${v}`, e = CAMS[key], i = e.cams.length + e.rooms.indexOf(r); return item(t, v, `<div class="cell" style="${cell(key, i)}"></div>`).replace(`${t} · ${v}</span>`, `${t} · ${v} · ${r}</span>`); };
   const all = TASKS.flatMap(([t]) => VLIST.map(v => [t, v]));
-  const rows = [all.filter(([t]) => t[0] === "C").map(([t, v]) => still(t, v)), all.filter(([t]) => t[0] === "R").map(([t, v]) => still(t, v)),
-    all.map(([t, v], i) => room(t, v, ROOMS[i % 3]))];
+  const rows = [all.filter(([t]) => t[0] === "C").map(([t, v]) => still(t, v)), all.filter(([t]) => t[0] === "R").map(([t, v]) => still(t, v))];
   host.innerHTML = rows.map((r, i) => `<div class="mrow${i % 2 ? " rev" : ""}"><div class="mtrack" style="--dur:${[80, 90, 150][i]}s">${r.join("")}${r.join("")}</div></div>`).join("");
   host.querySelectorAll(".mq").forEach(b => {
     const {t, v} = b.dataset;
