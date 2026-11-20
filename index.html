@@ -583,6 +583,23 @@ h3 { font-weight: 600 } h1, h4 { font-weight: 600 }
 .tip { border: 1px solid var(--rule); box-shadow: 0 6px 18px rgba(0, 0, 0, .08) }
 .hm .hl { stroke-width: 1.5 }
 section { padding-block: 84px 8px }
+
+/* the benchmark as one sum, numbers large */
+.eqwrap { padding-block: 34px 0 }
+.eq { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; flex-wrap: wrap; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--rule); padding-block: 22px }
+.eq .term { display: grid; gap: 2px; min-width: 0 }
+.eq .term b { font: 600 clamp(56px, 7.4vw, 104px)/.95 var(--display); letter-spacing: -.04em; font-variant-numeric: tabular-nums }
+.eq .term.c b { color: var(--con) } .eq .term.r b { color: var(--rea) } .eq .term.y b { color: #c99400 } .eq .term.big b { text-decoration: underline; text-decoration-thickness: 4px; text-underline-offset: 8px; text-decoration-color: var(--yellow) }
+.eq .term span { font: 600 15px/1.2 var(--display); margin-top: 6px }
+.eq .term small { font: 400 12.5px/1.35 var(--serif); color: var(--muted); max-width: 22ch }
+.eq > i { font: 300 clamp(32px, 4vw, 56px)/1 var(--display); font-style: normal; color: var(--faint); padding-top: clamp(8px, 1.4vw, 18px) }
+.eq2 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; padding-block: 16px 0 }
+.eq2 div { font: 500 14px/1.35 var(--display) }
+.eq2 b { font: 600 34px/1 var(--display); margin-right: 6px; vertical-align: -4px }
+.eq2 small { display: block; font: 400 12.5px/1.35 var(--serif); color: var(--muted); margin-top: 4px }
+.bign { font: 600 clamp(44px, 5vw, 68px)/.9 var(--display); letter-spacing: -.04em; color: var(--con); margin-right: 4px }
+.bign.r { color: var(--rea) } .bign.k { color: var(--ink) }
+@media (max-width: 860px) { .eq { justify-content: flex-start } .eq2 { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
 </style>
 </head>
 <body>
@@ -617,6 +634,26 @@ section { padding-block: 84px 8px }
     <div class="cv-dots" id="cv-dots" role="group" aria-label="Featured clips"></div>
   </section>
 
+  <div class="wrap eqwrap">
+    <div class="eq rv" aria-label="8 tasks times 5 configurations is 40 versions; times 12 scenes is 480 scenes">
+      <div class="term c"><b data-count="8">8</b><span>tasks</span><small>4 Concurrency · 4 Reach</small></div>
+      <i>×</i>
+      <div class="term y"><b data-count="5">5</b><span>configurations</span><small>exact · surplus · shortfall · swapped · borrow</small></div>
+      <i>=</i>
+      <div class="term"><b data-count="40">40</b><span>versions</span><small>26 feasible · 14 infeasible</small></div>
+      <i>×</i>
+      <div class="term r"><b data-count="12">12</b><span>scenes</span><small>2 levels × 6 seeds</small></div>
+      <i>=</i>
+      <div class="term big"><b data-count="480">480</b><span>scenes</span><small>312 feasible · 168 infeasible</small></div>
+    </div>
+    <div class="eq2 rv">
+      <div><b>3</b> robot models <small>Franka · PiPER · SO-101</small></div>
+      <div><b>4</b> places on one table <small>W · S · E fixed, N for surplus</small></div>
+      <div><b>3</b> rooms <small>kitchen · workshop · home</small></div>
+      <div><b>5</b> methods <small>× 2 backbones, one shot</small></div>
+    </div>
+  </div>
+
   <div class="wrap paper" id="paper">
     <div class="paper-grid rv">
       <div>
@@ -634,14 +671,6 @@ section { padding-block: 84px 8px }
           <a class="btn" href="#cite">BibTeX</a>
         </div>
       </div>
-    </div>
-    <div class="stats glass rv">
-      <div class="stat"><b data-count="8">8</b><span>tasks in two suites</span></div>
-      <div class="stat"><b data-count="5">5</b><span>configurations per task</span></div>
-      <div class="stat"><b data-count="40">40</b><span>versions, 14 infeasible</span></div>
-      <div class="stat"><b data-count="480">480</b><span>scenes: 2 levels × 6 seeds each</span></div>
-      <div class="stat"><b data-count="3">3</b><span>robot models: Franka, PiPER, SO-101</span></div>
-      <div class="stat"><b><span class="grad" data-count="85.4" data-dec="1">85.4</span></b><span>MRScissors team accuracy (%), Qwen3.8-Max</span></div>
     </div>
     <figure class="rv">
       <div class="figbox figwrap" data-fig="mrbench"><img src="assets/fig/mrbench.svg" alt="Two suites, two bottlenecks: concurrency-bound tasks need several arms at once, reach-bound tasks need every work site covered. On the right, one goal, five teams across the configurations."></div>
@@ -678,7 +707,7 @@ section { padding-block: 84px 8px }
       <div class="marq rv" id="marq" aria-label="Every version of every task"></div>
       <p class="note">Hover a scene to play its reference where a clip exists; click it to open that task below.</p>
 
-      <div class="sub rv"><span class="n">3.2.1</span><h3>Concurrency and Reach</h3></div>
+      <div class="sub rv"><span class="n">3.2.1</span><span class="bign">4</span><span class="bign k" style="font-weight:300">+</span><span class="bign r">4</span><h3>Concurrency and Reach</h3></div>
       <div class="suites">
         <div class="suite glass con rv d1"><i class="glow"></i><div class="tag">Concurrency</div><h4>Three hands at once</h4><p>One more than a two-handed robot has: two bodies held while a third hand works (Con-01, Con-02), one held while two work (Con-03), or three held together (Con-04).</p></div>
         <div class="suite glass rea rv d2"><i class="glow"></i><div class="tag">Reach</div><h4>No fixed arm reaches every place</h4><p>No two arms act at once. Bodies pass between arms by being set down, or each arm works where only it reaches.</p></div>
@@ -688,12 +717,12 @@ section { padding-block: 84px 8px }
         <figcaption><p><b>Overview of the eight tasks in MRBench.</b> Each at a key moment of its scripted reference (exact, easy level), with its steps in order and when (Concurrency) or where (Reach) each arm works.</p><button class="replay" type="button" data-replay="tasks">Replay</button></figcaption>
       </figure>
 
-      <div class="sub rv"><span class="n">3.2.2</span><h3>Five configurations</h3></div>
+      <div class="sub rv"><span class="n">3.2.2</span><span class="bign k">5</span><h3>Configurations</h3></div>
       <p class="lede rv" style="margin-top:10px">They change only a task's doers; each but the reference defeats a shortcut that skips measuring.</p>
       <div class="confs" id="confs"></div>
 
       <div class="gal-head rv">
-        <div class="sub" style="margin-top:0"><span class="n">3.2.3</span><h3>All eight tasks, all five configurations</h3></div>
+        <div class="sub" style="margin-top:0"><span class="n">3.2.3</span><span class="bign k">40</span><h3>Versions: every task in every configuration</h3></div>
         <div class="seg" role="group" aria-label="Level"><button type="button" data-lvl="easy" aria-pressed="true">easy</button><button type="button" data-lvl="hard" aria-pressed="false">hard</button></div>
       </div>
       <div class="suite-row con rv"><i style="background:var(--con)"></i>Concurrency <span>· several arms at the same moment</span></div>
