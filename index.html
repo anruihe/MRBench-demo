@@ -600,6 +600,11 @@ section { padding-block: 84px 8px }
 .bign { font: 600 clamp(44px, 5vw, 68px)/.9 var(--display); letter-spacing: -.04em; color: var(--con); margin-right: 4px }
 .bign.r { color: var(--rea) } .bign.k { color: var(--ink) }
 @media (max-width: 860px) { .eq { justify-content: flex-start } .eq2 { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+
+.paper .authors { font: 500 17px/1.7 var(--display); color: var(--ink); max-width: 46ch }
+.paper .authors a { text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 4px; text-decoration-thickness: 1px; white-space: nowrap }
+.paper .authors a:hover { text-decoration-color: var(--con); color: var(--con) }
+.paper .affil { margin-top: 4px; font: 400 14.5px/1.4 var(--serif); color: var(--muted) }
 </style>
 </head>
 <body>
@@ -659,7 +664,14 @@ section { padding-block: 84px 8px }
       <div>
         <div class="kicker"><b>Paper</b>under review</div>
         <h2 class="paper-h">MRBench: Benchmarking Physical Necessity Reasoning in Heterogeneous Multi-Robot Manipulation</h2>
-        <p class="authors">Anonymous authors</p>
+        <p class="authors">
+          <a href="https://chenanno.github.io/" target="_blank" rel="noopener">Yanzhe Chen</a>,
+          <a href="https://caozhijun.top/" target="_blank" rel="noopener">Zhijun Cao</a>,
+          <a href="https://anruihe.github.io/" target="_blank" rel="noopener">Ruihe An</a>,
+          <a href="https://github.com/seizethe-day" target="_blank" rel="noopener">Chang Gong</a>,
+          <a href="https://sites.google.com/view/showlab/home" target="_blank" rel="noopener">Mike Zheng Shou</a>
+        </p>
+        <p class="affil">Show Lab, National University of Singapore</p>
       </div>
       <div>
         <p class="lede" style="margin-top:0">Which arms, or which passive objects in their place, does a task truly need, when the goal stays fixed and the minimal feasible team changes?</p>
@@ -885,7 +897,7 @@ section { padding-block: 84px 8px }
       <pre class="bib glass rv" id="bib">@inproceedings{mrbench2026,
   title  = {MRBench: Benchmarking Physical Necessity Reasoning in
             Heterogeneous Multi-Robot Manipulation},
-  author = {Anonymous},
+  author = {Chen, Yanzhe and Cao, Zhijun and An, Ruihe and Gong, Chang and Shou, Mike Zheng},
   year   = {2026}
 }</pre>
       <div style="margin-top:12px"><button class="replay" type="button" id="copybib">Copy BibTeX</button> <span class="note" id="copied" aria-live="polite"></span></div>
