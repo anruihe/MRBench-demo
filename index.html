@@ -7,7 +7,7 @@
 <meta name="description" content="MRBench: benchmarking physical necessity reasoning in heterogeneous multi-robot manipulation. Eight Isaac Sim tasks in five configurations.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 /* A light, glassy workcell: the background is a slow field of arms (nodes) and their reach (rings);
    content floats on frosted panels. Red = Concurrency, blue = Reach, violet = MRScissors. */
@@ -528,6 +528,59 @@ body { font-size: 16.5px }
 .tip { border-radius: 0; border: 2px solid var(--ink); background: var(--glass-hi); box-shadow: 4px 4px 0 var(--ink); -webkit-backdrop-filter: none; backdrop-filter: none }
 pre.bib { border-radius: 0 }
 .hud { --c: var(--yellow) }
+
+/* ================= academic restraint: Bauhaus kept as accents ================= */
+:root { --serif: "Source Serif 4", "Iowan Old Style", Georgia, "Times New Roman", serif; --rule: rgba(20, 20, 20, .22); --shadow: 0 1px 2px rgba(20, 20, 20, .06); --bg: #f6f3ec; --glass: #fbf9f4 }
+body { font: 400 17px/1.65 var(--serif) }
+.lede, .prose, .card p, .suite p, .conf p, .rule p, .step p, .block .tx p, figcaption, .note, .why, .tsteps, .thing { font-family: var(--serif) }
+.block .tx p.short { font-family: var(--serif); font-weight: 600 }
+h2 { font-size: clamp(28px, 3.4vw, 42px); font-weight: 600; letter-spacing: -.02em }
+h3 { font-weight: 600 } h1, h4 { font-weight: 600 }
+.glass { border: 1px solid var(--rule); box-shadow: var(--shadow) }
+.gridfx { display: none }
+#field { opacity: .45 }
+.bar { padding-block: 0 }
+.bar .in { border: 0; border-bottom: 1px solid var(--rule); box-shadow: none; background: color-mix(in srgb, var(--bg) 92%, transparent); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); padding-inline: 0 }
+.bar nav a:hover, .bar nav a.on { background: none; color: var(--ink); box-shadow: inset 0 -2px 0 var(--con) }
+.brand { text-transform: none; font-weight: 700; letter-spacing: 0 }
+.kicker b { background: none; color: var(--con); padding: 0; font-weight: 600 }
+.kicker::after { height: 2px; width: 48px }
+.btn { border: 1px solid var(--rule); box-shadow: none; font-weight: 500 } .btn:hover { transform: none; box-shadow: none; border-color: var(--ink) }
+.btn.primary { background: var(--ink); color: var(--bg) }
+.seg { border: 1px solid var(--rule) } .vchips button, .tpills button, .replay, .pill { border-width: 1px; border-color: var(--rule) }
+.pill { background: color-mix(in srgb, var(--yellow) 22%, var(--glass-hi)) }
+/* cover */
+.cslide .card { border: 0; box-shadow: none; border-radius: 4px }
+.cv-copy h1 { text-transform: none; font-weight: 600; letter-spacing: -.035em; font-size: clamp(56px, 9vw, 124px) }
+.cv-sub { font-family: var(--serif); font-weight: 400 } .cv-quote { font-family: var(--serif) }
+.cv-shapes i { width: 18px; height: 18px } .cv-shapes .t { border-left-width: 10px; border-right-width: 10px; border-bottom-width: 18px }
+.cv-btn { border: 1px solid rgba(255, 255, 255, .7); background: rgba(0, 0, 0, .25) }
+.cv-nav { border: 1px solid var(--rule); background: var(--glass-hi); box-shadow: none }
+.cv-dots button { border-width: 1px; height: 8px; width: 8px } .cv-dots button[aria-current="true"] { width: 28px }
+/* stats, figures, cards */
+.stat { border-right: 1px solid var(--rule) } .stat b { font-weight: 600 }
+.stat::before { width: 8px; height: 8px; margin-bottom: 10px } .stat:nth-child(3n)::before { border-left-width: 5px; border-right-width: 5px; border-bottom-width: 9px }
+.figbox { border: 1px solid var(--rule); box-shadow: none; border-radius: 4px }
+.card::before { height: 3px } .card .ic { border: 0; width: 36px; height: 36px } .card .math { border: 1px solid var(--rule) }
+.suite { border-left-width: 4px } .tcard { border-top-width: 3px } .rule { border-top-width: 3px }
+.rule .no { font-size: 18px; color: var(--con) }
+.tmedia { border: 0; border-radius: 3px } .mq, .shot { border: 1px solid var(--rule); border-radius: 3px } .mq:hover { box-shadow: none }
+.wc, .kpi { border: 1px solid var(--rule) }
+.arm i { border: 1.5px solid var(--rule) } .arm.work i { color: #fff }
+.conf:hover, .tcard:hover { transform: none }
+.mini .tb { stroke: var(--rule) }
+.step .sn { border: 0; width: 34px; height: 34px; box-shadow: 0 0 0 5px var(--bg) }
+.pipe::before { height: 2px; background: repeating-linear-gradient(90deg, var(--rule) 0 6px, transparent 6px 12px) }
+.step code { background: color-mix(in srgb, var(--yellow) 25%, transparent) }
+.suite-row::after { height: 1px; background: var(--rule) }
+/* results */
+.lb th { border-bottom: 1px solid var(--ink) }
+.lb .rk b { border: 1px solid var(--rule) }
+.lb tr.top .rk b { border: 0 }
+.lb tbody tr.ours td { background: color-mix(in srgb, var(--yellow) 10%, transparent) }
+.tip { border: 1px solid var(--rule); box-shadow: 0 6px 18px rgba(0, 0, 0, .08) }
+.hm .hl { stroke-width: 1.5 }
+section { padding-block: 84px 8px }
 </style>
 </head>
 <body>
@@ -849,11 +902,11 @@ const verdictText = e => { const team = teamOf(e); return e.feasible ? `${team.s
     ["con", "rea", "yellow", "ink"].forEach(v => { p.style.color = `var(--${v})`; col[v] = getComputedStyle(p).color; }); p.remove(); }
   const KINDS = ["circle", "square", "tri", "half", "bar", "ring", "circle", "square"], COLS = ["con", "rea", "yellow", "ink", "yellow", "con", "rea"];
   function mk(i) { const s = 50 + Math.random() * 210; return {k: KINDS[i % KINDS.length], c: COLS[(i * 3) % COLS.length], s, x: Math.random() * W, y: Math.random() * H, a: Math.random() * 6.28,
-    va: (Math.random() - .5) * .0016, vx: (Math.random() - .5) * .12, vy: (Math.random() - .5) * .12, z: .3 + Math.random() * .9}; }
+    va: (Math.random() - .5) * .0008, vx: (Math.random() - .5) * .07, vy: (Math.random() - .5) * .07, z: .3 + Math.random() * .9}; }
   function size() { const dpr = Math.min(devicePixelRatio || 1, 1.5); W = innerWidth; H = innerHeight; cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + "px"; cv.style.height = H + "px"; cx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const n = Math.round(Math.min(13, Math.max(7, W * H / 110000))); while (shapes.length < n) shapes.push(mk(shapes.length)); shapes.length = n; }
+    const n = Math.round(Math.min(8, Math.max(5, W * H / 180000))); while (shapes.length < n) shapes.push(mk(shapes.length)); shapes.length = n; }
   function draw(sh, x, y) {
-    cx.save(); cx.translate(x, y); cx.rotate(sh.a); cx.globalAlpha = sh.c === "ink" ? .06 : .11; cx.fillStyle = cx.strokeStyle = col[sh.c]; const s = sh.s;
+    cx.save(); cx.translate(x, y); cx.rotate(sh.a); cx.globalAlpha = sh.c === "ink" ? .04 : .08; cx.fillStyle = cx.strokeStyle = col[sh.c]; const s = sh.s;
     cx.beginPath();
     if (sh.k === "circle") { cx.arc(0, 0, s / 2, 0, 6.283); cx.fill(); }
     else if (sh.k === "square") { cx.fillRect(-s / 2, -s / 2, s, s); }
